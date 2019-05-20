@@ -7,12 +7,12 @@ Clone this repo and perform a vargrant up
 e.g.
 
 ``` bash
-git clone ...
-cd ...
+git clone git@github.com:allthingsclowd/Consul_Connect_1.5_Example.git
+cd Consul_Connect_1.5_Example
 vagrant up
 ```
 
-This will create a demo consul environment with one consul server and two consul clients.
+This will create a demo consul environment with one consul server (leader01) and two consul clients (app01 & client01).
 
 The following service configuration has been preconfigured on Consul
 
@@ -40,8 +40,7 @@ services {
 }
 ```
 
-
-# Configure the service and clients once Consul is booted
+# Configure the application service and clients once Consul is booted
 
 ``` bash
 consul members
