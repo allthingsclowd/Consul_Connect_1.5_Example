@@ -13,32 +13,7 @@ vagrant up
 ```
 
 This will create a demo consul environment with one consul server (leader01) and two consul clients (app01 & client01).
-
-The following service configuration has been preconfigured on Consul
-
-``` hcl
-services {
-  name = "client"
-  port = 1234
-  connect {
-    sidecar_service {
-      proxy {
-        upstreams {
-          destination_name = "http-echo"
-          local_bind_port = 9091
-        }
-      }
-    }
-  }
-}
-services {
-  name = "http-echo"
-  port = 9090
-  connect {
-    sidecar_service {}
-  }
-}
-```
+The Consul `cluster` is already secured using TLS certificates and ACLs have been enabled.
 
 # Configure the application service and clients once Consul is booted
 
@@ -49,6 +24,144 @@ leader01  192.168.2.11:8301   alive   server  1.5.0  2         allthingscloud1  
 app01     192.168.2.101:8301  alive   client  1.5.0  2         allthingscloud1  <default>
 client01  192.168.2.201:8301  alive   client  1.5.0  2         allthingscloud1  <default>
 ```
+
+So first let's create an ACL tokens to be used to secure the application service and the client
+
+``` bash
+BOOTSTRAPACL=`cat /usr/local/bootstrap/.bootstrap_acl`
+export CONSUL_HTTP_TOKEN=${BOOTSTRAPACL}
+echo ${CONSUL_HTTP_TOKEN}
+export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
+export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
+export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
+export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+
+create_acl_policy () {
+
+      curl \
+      --request PUT \
+      --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+      --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+      --cert "/usr/local/bootstrap/certificate-config/client.pem" \
+      --header "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" \
+      --data \
+    "{
+      \"Name\": \"${1}\",
+      \"Description\": \"${2}\",
+      \"Rules\": \"${3}\"
+      }" https://127.0.0.1:8321/v1/acl/policy
+}
+
+create_acl_policy "http-echo-policy" "HTTP Echo Service" "node_prefix \\\"\\\" { policy = \\\"write\\\"} service_prefix \\\"\\\" { policy = \\\"write\\\" intentions = \\\"write\\\" } "
+
+SERVICETOKEN=$(curl \
+  --request PUT \
+  --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+  --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+  --cert "/usr/local/bootstrap/certificate-config/client.pem" \
+  --header "X-Consul-Token: ${CONSUL_HTTP_TOKEN}" \
+  --data \
+'{
+    "Description": "HTTP Echo Service Token",
+    "Policies": [
+        {
+          "Name": "http-echo-policy"
+        }
+    ],
+    "Local": false
+  }' https://127.0.0.1:8321/v1/acl/token | jq -r .SecretID)
+
+  echo "The httpecho service Token received => ${SERVICETOKEN}"
+  echo -n ${SERVICETOKEN} > /usr/local/bootstrap/.httpservicetoken_acl
+  sudo chmod ugo+r /usr/local/bootstrap/.httpservicetoken_acl
+  export SERVICETOKEN
+
+  # configure http-echo service definition
+  tee httpecho_service.json <<EOF
+{
+  "ID": "httpecho1",
+  "Name": "httpecho",
+  "Tags": [
+    "primary",
+    "v1"
+  ],
+  "Address": "127.0.0.1",
+  "Port": 9090,
+  "connect": { "sidecar_service": {} },
+  "Meta": {
+    "httpecho_version": "1.0"
+  },
+  "EnableTagOverride": false
+}
+EOF
+
+# Register the service in consul via the local Consul agent api
+sudo curl \
+    --request PUT \
+    --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+    --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+    --cert "/usr/local/bootstrap/certificate-config/client.pem" \
+    --header "X-Consul-Token: ${SERVICETOKEN}" \
+    --data @httpecho_service.json \
+    ${CONSUL_HTTP_ADDR}/v1/agent/service/register
+
+```
+
+Login to the client01 and register the client service
+
+``` bash
+
+SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
+export CONSUL_HTTP_TOKEN=${SERVICETOKEN}
+echo ${CONSUL_HTTP_TOKEN}
+export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
+
+
+  # configure http-echo service definition
+  tee client4httpecho_service.json <<EOF
+{
+  "ID": "client1",
+  "Name": "client",
+  "Tags": [
+    "client",
+    "v1"
+  ],
+  "Address": "127.0.0.1",
+  "Port": 1234,
+  "connect": { "sidecar_service": {
+    "proxy": {
+        "upstreams": [
+          {
+            "destination_name": "httpecho",
+            "local_bind_port": 9091
+          }
+        ],
+        "config": {
+          "handshake_timeout_ms": 1000
+        }
+    }
+  },
+  "Meta": {
+    "client_version": "1.0"
+  },
+  "EnableTagOverride": false
+
+  }
+}
+EOF
+
+# Register the service in consul via the local Consul agent api
+sudo curl \
+    --request PUT \
+    --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+    --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+    --cert "/usr/local/bootstrap/certificate-config/client.pem" \
+    --header "X-Consul-Token: ${SERVICETOKEN}" \
+    --data @client4httpecho_service.json \
+    ${CONSUL_HTTP_ADDR}/v1/agent/service/register
+```
+
+
 
 The Consul dashboard should look like this ![image](https://user-images.githubusercontent.com/9472095/58022030-77b5ce80-7b04-11e9-99d4-f73bdc674051.png)
 
@@ -78,7 +191,7 @@ So we now have a working demo http application that we are going to secure using
 First let's check that the consul bootstrap process is working by simply requesting the bootstrap file but not actually starting the service...
 
 ``` bash
-/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=d9c1de45-6a1d-e133-7d0c-5f5756252918 -sidecar-for http-echo -bootstrap
+/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=15ea8121-f4b0-2c03-59c2-7626d000046f -sidecar-for httpecho1 -bootstrap
 ```
 
 and the response will look something like this
@@ -95,8 +208,8 @@ and the response will look something like this
     }
   },
   "node": {
-    "cluster": "http-echo",
-    "id": "http-echo-sidecar-proxy"
+    "cluster": "httpecho",
+    "id": "httpecho1-sidecar-proxy"
   },
   "static_resources": {
     "clusters": [
@@ -117,14 +230,14 @@ and the response will look something like this
     ]
   },
   "stats_config": {
-                        "stats_tags": [
-                                {
-                        "tag_name": "local_cluster",
-                        "fixed_value": "http-echo"
-                }
-                        ],
-                        "use_all_default_tags": true
-                },
+			"stats_tags": [
+				{
+			"tag_name": "local_cluster",
+			"fixed_value": "httpecho"
+		}
+			],
+			"use_all_default_tags": true
+		},
   "dynamic_resources": {
     "lds_config": { "ads": {} },
     "cds_config": { "ads": {} },
@@ -134,7 +247,7 @@ and the response will look something like this
         "initial_metadata": [
           {
             "key": "x-consul-token",
-            "value": "d9c1de45-6a1d-e133-7d0c-5f5756252918"
+            "value": "15ea8121-f4b0-2c03-59c2-7626d000046f"
           }
         ],
         "envoy_grpc": {
@@ -143,12 +256,13 @@ and the response will look something like this
       }
     }
   }
+}
 ```
 
 Now that we can see we're getting the configured bootstrap information we're going to launch an envoy proxy this time by removing the `-bootstrap` option. I'm also going to add the `-- -l debug` to this session so that we can see what's happening - not required during normal operation
 
 ``` bash
-/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=d9c1de45-6a1d-e133-7d0c-5f5756252918 -sidecar-for http-echo -- -l debug &
+/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=15ea8121-f4b0-2c03-59c2-7626d000046f -sidecar-for httpecho1 -- -l debug &
 ```
 
 and we get a lot of scary information like this
@@ -569,7 +683,7 @@ vagrant ssh client01
 Let's quickly verify what the consul envoy bootstrap config looks like for this proxy
 
 ``` bash
-/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=d9c1de45-6a1d-e133-7d0c-5f5756252918 -sidecar-for client -bootstrap
+/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=15ea8121-f4b0-2c03-59c2-7626d000046f -sidecar-for client1 -bootstrap
 ```
 
 and we get
@@ -640,7 +754,7 @@ and we get
 So let apply this again with the envoy debug option set
 
 ``` bash
-/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=d9c1de45-6a1d-e133-7d0c-5f5756252918 -sidecar-for client -- -l debug &
+/usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=15ea8121-f4b0-2c03-59c2-7626d000046f -sidecar-for client1 -- -l debug &
 ```
 
 which returns the following logs

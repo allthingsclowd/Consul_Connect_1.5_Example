@@ -36,22 +36,22 @@ Vagrant.configure("2") do |config|
         v.memory = 1024
         v.cpus = 1
     end
-
+    #config.vm.network "public_network", bridge: 'en1: Wi-Fi (AirPort)', ip: "192.168.1.201"
     config.vm.define "leader01" do |leader01|
         leader01.vm.hostname = ENV['LEADER_NAME']
-        leader01.vm.network "private_network", ip: ENV['LEADER_IP']
+        leader01.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)', ip: ENV['LEADER_IP']
         leader01.vm.network "forwarded_port", guest: 8321, host: 8321
     end
 
     config.vm.define "app01" do |app01|
         app01.vm.hostname = ENV['APPSERVER_NAME']
-        app01.vm.network "private_network", ip: ENV['APPSERVER_IP']
+        app01.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)', ip: ENV['APPSERVER_IP']
         # app01.vm.network "forwarded_port", guest: 8321, host: 8321
     end
 
     config.vm.define "client01" do |client01|
         client01.vm.hostname = ENV['CLIENT_NAME']
-        client01.vm.network "private_network", ip: ENV['CLIENT_IP']
+        client01.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)', ip: ENV['CLIENT_IP']
         # client01.vm.network "forwarded_port", guest: 8321, host: 8321
     end
 
