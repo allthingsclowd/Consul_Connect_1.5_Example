@@ -50,7 +50,7 @@ app01     192.168.2.101:8301  alive   client  1.5.0  2         allthingscloud1  
 client01  192.168.2.201:8301  alive   client  1.5.0  2         allthingscloud1  <default>
 ```
 
-The Consul dashboard should look like this <Insert image here later>
+The Consul dashboard should look like this ![image](https://user-images.githubusercontent.com/9472095/58022030-77b5ce80-7b04-11e9-99d4-f73bdc674051.png)
 
 ## Let's start the demo application
 
