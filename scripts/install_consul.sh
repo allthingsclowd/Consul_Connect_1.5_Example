@@ -112,7 +112,7 @@ setup_environment () {
 install_prerequisite_binaries () {
 
     # check consul binary
-    [ -f /usr/local/bin/consul ] &>/dev/null || {
+    [ -f /usr/local/bin/consul-force-install ] &>/dev/null || {
         pushd /usr/local/bin
         [ -f consul_${consul_version}_linux_amd64.zip ] || {
             sudo wget -q https://releases.hashicorp.com/consul/${consul_version}/consul_${consul_version}_linux_amd64.zip
@@ -124,7 +124,7 @@ install_prerequisite_binaries () {
     }
 
     # check consul-template binary
-    [ -f /usr/local/bin/consul-template ] &>/dev/null || {
+    [ -f /usr/local/bin/consul-template-force-install ] &>/dev/null || {
         pushd /usr/local/bin
         [ -f consul-template_${consul_template_version}_linux_amd64.zip ] || {
             sudo wget -q https://releases.hashicorp.com/consul-template/${consul_template_version}/consul-template_${consul_template_version}_linux_amd64.zip
@@ -136,7 +136,7 @@ install_prerequisite_binaries () {
     }
 
     # check envconsul binary
-    [ -f /usr/local/bin/envconsul ] &>/dev/null || {
+    [ -f /usr/local/bin/envconsul-force-install ] &>/dev/null || {
         pushd /usr/local/bin
         [ -f envconsul_${env_consul_version}_linux_amd64.zip ] || {
             sudo wget -q https://releases.hashicorp.com/envconsul/${env_consul_version}/envconsul_${env_consul_version}_linux_amd64.zip
