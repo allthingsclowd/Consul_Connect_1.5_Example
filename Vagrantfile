@@ -19,11 +19,11 @@ Vagrant.configure("2") do |config|
 
     #override global variables to fit Vagrant setup
     ENV['LEADER_NAME']||="leader01"
-    ENV['LEADER_IP']||="192.168.2.11"
+    ENV['LEADER_IP']||="192.168.99.11"
     ENV['APPSERVER_NAME']||="app01"
-    ENV['APPSERVER_IP']||="192.168.2.101"
+    ENV['APPSERVER_IP']||="192.168.99.101"
     ENV['CLIENT_NAME']||="client01"
-    ENV['CLIENT_IP']||="192.168.2.201"        
+    ENV['CLIENT_IP']||="192.168.99.201"        
     
     #global config
     config.vm.synced_folder ".", "/vagrant"
@@ -40,20 +40,18 @@ Vagrant.configure("2") do |config|
     #config.vm.network "public_network", bridge: 'en1: Wi-Fi (AirPort)', ip: "192.168.1.201"
     config.vm.define "leader01" do |leader01|
         leader01.vm.hostname = ENV['LEADER_NAME']
-        leader01.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)', ip: ENV['LEADER_IP']
+        leader01.vm.network "private_network", ip: ENV['LEADER_IP']
         leader01.vm.network "forwarded_port", guest: 8321, host: 8321
     end
 
     config.vm.define "app01" do |app01|
         app01.vm.hostname = ENV['APPSERVER_NAME']
-        app01.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)', ip: ENV['APPSERVER_IP']
-        # app01.vm.network "forwarded_port", guest: 8321, host: 8321
+        app01.vm.network "private_network", ip: ENV['APPSERVER_IP']
     end
 
     config.vm.define "client01" do |client01|
         client01.vm.hostname = ENV['CLIENT_NAME']
-        client01.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)', ip: ENV['CLIENT_IP']
-        # client01.vm.network "forwarded_port", guest: 8321, host: 8321
+        client01.vm.network "private_network", ip: ENV['CLIENT_IP']
     end
 
    puts info if ARGV[0] == "status"
