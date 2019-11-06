@@ -246,7 +246,7 @@ install_consul () {
     configure_consul_certs false
     /usr/local/bin/consul members 2>/dev/null || {
 
-        create_service consul "HashiCorp Consul Agent Service"  "/usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -join=${LEADER_IP}"
+        create_service consul "HashiCorp Consul Agent Service"  "/usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=${IP} ${AGENT_CONFIG} -grpc-port=8502 -data-dir=/usr/local/consul -join=${LEADER_IP}"
         # ensure consul service has permissions to access certificates
         sudo usermod -a -G consulcerts consul
         sudo systemctl start consul

@@ -14,6 +14,7 @@ main
 .agenttoken_acl
 .bootstrap_acl
 .vaulttoken_acl
+.httpservicetoken_acl
 1
 .azure
 .terraform
