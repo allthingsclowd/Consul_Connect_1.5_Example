@@ -7,8 +7,8 @@ Clone this repo and perform a vargrant up
 e.g.
 
 ``` bash
-git clone git@github.com:allthingsclowd/Consul_Connect_1.5_Example.git
-cd Consul_Connect_1.5_Example
+git clone git@github.com:allthingsclowd/Consul_Connect_Envoy_Example.git
+cd Consul_Connect_Envoy_Example
 vagrant up
 ```
 
