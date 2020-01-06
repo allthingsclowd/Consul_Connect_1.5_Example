@@ -20,7 +20,8 @@ generate_certificate_config () {
   },
   "ports": {
       "https": 8321,
-      "http": -1
+      "http": -1,
+      "grpc": 8502
   },
   "verify_incoming": true,
   "verify_outgoing": true,
