@@ -6,7 +6,7 @@ Clone this repo and perform a vargrant up
 
 e.g.
 
-``` bash
+``` console
 git clone git@github.com:allthingsclowd/Consul_Connect_Envoy_Example.git
 cd Consul_Connect_Envoy_Example
 vagrant up
@@ -17,7 +17,7 @@ The Consul `cluster` is already secured using TLS certificates and ACLs have bee
 
 # Configure the application service and clients once Consul is booted
 
-``` bash
+``` console
 consul members
 Node      Address             Status  Type    Build  Protocol  DC               Segment
 leader01  192.168.99.11:8301   alive   server  1.5.0  2         allthingscloud1  <all>
@@ -27,7 +27,7 @@ client01  192.168.99.201:8301  alive   client  1.5.0  2         allthingscloud1 
 
 So first let's create an ACL tokens to be used to secure the application service and the client
 
-``` bash
+``` console
 
 vagrant ssh leader01
 
@@ -61,11 +61,11 @@ create_acl_policy "http-echo-policy" "HTTP Echo Service" "node_prefix \\\"\\\" {
 
 Note: returns the following error if `allow` is used by mistake instead of `write` for the intentions vaule
 
-``` bash
+``` console
 Invalid service_prefix intentions policy: acl.ServicePolicy{Name:"", Policy:"write", Sentinel:acl.Sentinel{Code:"", EnforcementLevel:""}, Intentions:"allow"}
 ```
 
-``` bash
+``` console
 
 
 SERVICETOKEN=$(curl \
@@ -97,7 +97,7 @@ SERVICETOKEN=$(curl \
 We'll use this token now on the app01 node when configuring it's service definition
 In another session window login to the app01 node
 
-``` bash
+``` console
 
 vagrant ssh app01
 
@@ -143,7 +143,7 @@ sudo curl \
 
 Login to the client01 and register the client service
 
-``` bash
+``` console
 
 vagrant ssh client01
 
@@ -154,6 +154,7 @@ export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
 export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
 export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+export CONSUL_HTTP_SSL=true
 
 
   # configure http-echo service definition
@@ -209,7 +210,7 @@ The Consul dashboard on https://localhost:8321/ui/allthingscloud1/services shoul
 
 Login to the app01 and run the `http-echo` application in the background remembering to set the application port to 9090 as follows:
 
-``` bash
+``` console
 vagrant ssh app01
 http-echo -listen="127.0.0.1:9090" -text="Hello from ${HOSTNAME} application server!" &
 
@@ -218,7 +219,7 @@ http-echo -listen="127.0.0.1:9090" -text="Hello from ${HOSTNAME} application ser
 
 Run a quick test as follows:
 
-``` bash
+``` console
 curl http://127.0.0.1:9090
 
 Hello from app01 application server!
@@ -230,7 +231,8 @@ So we now have a working demo http application that we are going to secure using
 
 First let's check that the consul bootstrap process is working by simply requesting the bootstrap file but not actually starting the service...
 
-``` bash
+``` console
+export CONSUL_HTTP_SSL=true
 SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
 
 /usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=${SERVICETOKEN} -sidecar-for httpecho -bootstrap
@@ -303,7 +305,8 @@ and the response will look something like this
 
 Now that we can see we're getting the configured bootstrap information we're going to launch an envoy proxy this time by removing the `-bootstrap` option. I'm also going to add the `-- -l debug` to this session so that we can see what's happening - not required during normal operation
 
-``` bash
+``` console
+export CONSUL_HTTP_SSL=true
 SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
 
 /usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=${SERVICETOKEN} -sidecar-for httpecho -- -l debug &
@@ -311,7 +314,7 @@ SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
 
 and we get a lot of scary information like this
 
-``` bash
+``` console
 vagrant@app01:~$ /usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=b911b6ed-0d11-7a58-9f6e-c348b3b3af3d -sidecar-for httpecho -- -l debug &
 [2] 1772
 vagrant@app01:~$ [2019-05-21 15:29:08.574][001772][info][main] [source/server/server.cc:206] initializing epoch 0 (hot restart version=disabled)
@@ -376,7 +379,7 @@ vagrant@app01:~$ [2019-05-21 15:29:08.574][001772][info][main] [source/server/se
 
 It's also possible to query the envoy configuration by using envoy's admin interface 
 
-``` bash
+``` console
 curl localhost:19000/config_dump
 ```
 
@@ -488,14 +491,15 @@ _[Note-to-self :at this point the app sidecar proxy still shows as failing in Co
 
 ## Now we'll jump over to the client node and start the client proxy service
 
-``` bash
+``` console
 exit
 vagrant ssh client01
 ```
 
 Let's quickly verify what the consul envoy bootstrap config looks like for this proxy
 
-``` bash
+``` console
+export CONSUL_HTTP_SSL=true
 SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
 
 /usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=${SERVICETOKEN} -sidecar-for client -admin-bind localhost:19001  -bootstrap
@@ -568,7 +572,8 @@ and we get
 
 So let apply this again with the envoy debug option set
 
-``` bash
+``` console
+export CONSUL_HTTP_SSL=true
 SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
 
 /usr/local/bin/consul connect envoy -http-addr=https://127.0.0.1:8321 -ca-file=/usr/local/bootstrap/certificate-config/consul-ca.pem -client-cert=/usr/local/bootstrap/certificate-config/cli.pem -client-key=/usr/local/bootstrap/certificate-config/cli-key.pem -token=${SERVICETOKEN} -sidecar-for client -admin-bind localhost:19001 -- -l debug &
@@ -576,7 +581,7 @@ SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
 
 which returns the following logs
 
-``` bash
+``` console
 vagrant@client01:~$ [2019-05-21 15:56:39.338][001823][info][main] [source/server/server.cc:206] initializing epoch 0 (hot restart version=disabled)
 [2019-05-21 15:56:39.338][001823][info][main] [source/server/server.cc:208] statically linked extensions:
 [2019-05-21 15:56:39.338][001823][info][main] [source/server/server.cc:210]   access_loggers: envoy.file_access_log,envoy.http_grpc_access_log
@@ -655,7 +660,7 @@ vagrant@client01:~$ [2019-05-21 15:56:39.338][001823][info][main] [source/server
 
 And the envoy proxy client configuration looks like this
 
-``` bash
+``` console
 curl localhost:19000/config_dump
 ```
 
@@ -765,7 +770,7 @@ returns
 
 On the client node
 
-``` bash
+``` console
 vagrant@client01:~$ curl http://127.0.0.1:1234
 curl: (7) Failed to connect to 127.0.0.1 port 1234: Connection refused
 vagrant@client01:~$ curl http://localhost:1234
@@ -774,7 +779,7 @@ curl: (7) Failed to connect to localhost port 1234: Connection refused
 
 Listening ports
 
-``` bash
+``` console
 vagrant@client01:~$ sudo lsof -i -P -n | grep LISTEN
 systemd-r  482 systemd-resolve   13u  IPv4  15611      0t0  TCP 127.0.0.53:53 (LISTEN)
 rpcbind    483            root    8u  IPv4  15628      0t0  TCP *:111 (LISTEN)
@@ -787,7 +792,7 @@ consul    1419          consul    9u  IPv6  24101      0t0  TCP *:8321 (LISTEN)
 envoy     1823         vagrant    9u  IPv4  26982      0t0  TCP 127.0.0.1:19000 (LISTEN)
 ```
 
-``` bash
+``` console
 vagrant@leader01:~$ sudo lsof -i -P -n | grep LISTEN
 rpcbind    471            root    8u  IPv4  15630      0t0  TCP *:111 (LISTEN)
 rpcbind    471            root   11u  IPv6  15633      0t0  TCP *:111 (LISTEN)
@@ -802,7 +807,7 @@ consul    1650          consul   14u  IPv6  24906      0t0  TCP *:8321 (LISTEN)
 consul    1650          consul   15u  IPv4  24908      0t0  TCP 127.0.0.1:8502 (LISTEN)
 ```
 
-``` bash
+``` console
  sudo lsof -i -P -n | grep LISTEN
 rpcbind    472            root    8u  IPv4  15555      0t0  TCP *:111 (LISTEN)
 rpcbind    472            root   11u  IPv6  15558      0t0  TCP *:111 (LISTEN)
@@ -820,7 +825,7 @@ envoy     1772         vagrant    9u  IPv4  26229      0t0  TCP 127.0.0.1:19000 
 
 ## Consul server - leader01
 
-```bash
+``` console
 vagrant@leader01:~$ systemctl status consul
 ● consul.service - HashiCorp Consul Server SD & KV Service
    Loaded: loaded (/etc/systemd/system/consul.service; disabled; vendor preset: enabled)
@@ -889,7 +894,7 @@ vagrant@leader01:~$
 
 ## Consul server - app01
 
-``` bash
+``` console
 vagrant@app01:~$ systemctl status consul
 ● consul.service - HashiCorp Consul Agent Service
    Loaded: loaded (/etc/systemd/system/consul.service; disabled; vendor preset: enabled)
@@ -937,7 +942,7 @@ vagrant@app01:~$
 
 ## Consul server - client01
 
-```bash
+``` console
 vagrant@client01:~$ systemctl status consul
 ● consul.service - HashiCorp Consul Agent Service
    Loaded: loaded (/etc/systemd/system/consul.service; disabled; vendor preset: enabled)
