@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 
 generate_certificate_config () {
+  if [ ! -d /etc/consul.d ]; then
+    sudo mkdir --parents /etc/consul.d
+  fi
 
-  sudo mkdir -p /etc/pki/tls/private
-  sudo mkdir -p /etc/pki/tls/certs
-  sudo mkdir -p /etc/consul.d
-  sudo cp -r /usr/local/bootstrap/certificate-config/${5}-key.pem /etc/pki/tls/private/${5}-key.pem
-  sudo cp -r /usr/local/bootstrap/certificate-config/${5}.pem /etc/pki/tls/certs/${5}.pem
-  sudo cp -r /usr/local/bootstrap/certificate-config/consul-ca.pem /etc/pki/tls/certs/consul-ca.pem
   sudo tee /etc/consul.d/consul_cert_setup.json <<EOF
   {
   "datacenter": "allthingscloud1",
   "data_dir": "/usr/local/consul",
+  "encrypt" : "${ConsulKeygenOutput}",
   "log_level": "INFO",
   "server": ${1},
   "node_name": "${HOSTNAME}",
@@ -25,67 +23,11 @@ generate_certificate_config () {
   },
   "verify_incoming": true,
   "verify_outgoing": true,
-  "key_file": "$2",
-  "cert_file": "$3",
-  "ca_file": "$4"
+  "key_file": "/etc/consul.d/pki/tls/private/consul/server-key.pem",
+  "cert_file": "/etc/consul.d/pki/tls/certs/consul/server.pem",
+  "ca_file": "/etc/consul.d/pki/tls/certs/consul/consul-ca.pem"
   }
 EOF
-
-}
-
-create_service () {
-  if [ ! -f /etc/systemd/system/${1}.service ]; then
-    
-    create_service_user ${1}
-    
-    sudo tee /etc/systemd/system/${1}.service <<EOF
-### BEGIN INIT INFO
-# Provides:          ${1}
-# Required-Start:    $local_fs $remote_fs
-# Required-Stop:     $local_fs $remote_fs
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: ${1} agent
-# Description:       ${2}
-### END INIT INFO
-
-[Unit]
-Description=${2}
-Requires=network-online.target
-After=network-online.target
-
-[Service]
-User=${1}
-Group=${1}
-PIDFile=/var/run/${1}/${1}.pid
-PermissionsStartOnly=true
-ExecStartPre=-/bin/mkdir -p /var/run/${1}
-ExecStartPre=/bin/chown -R ${1}:${1} /var/run/${1}
-ExecStart=${3}
-ExecReload=/bin/kill -HUP ${MAINPID}
-KillMode=process
-KillSignal=SIGTERM
-Restart=on-failure
-RestartSec=2s
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-  sudo systemctl daemon-reload
-
-  fi
-
-}
-
-create_service_user () {
-  
-  if ! grep ${1} /etc/passwd >/dev/null 2>&1; then
-    echo "Creating ${1} user to run the consul service"
-    sudo useradd --system --home /etc/${1}.d --shell /bin/false ${1}
-    sudo mkdir --parents /opt/${1} /usr/local/${1} /etc/${1}.d
-    sudo chown --recursive ${1}:${1} /opt/${1} /etc/${1}.d /usr/local/${1}
-  fi
 
 }
 
@@ -94,9 +36,11 @@ setup_environment () {
   sleep 5
   source /usr/local/bootstrap/var.env
   
-  IFACE=`route -n | awk '$1 == "192.168.99.0" {print $8;exit}'`
-  CIDR=`ip addr show ${IFACE} | awk '$2 ~ "192.168.99" {print $2}'`
+  IFACE=`route -n | awk '$1 == "192.168.9.0" {print $8;exit}'`
+  CIDR=`ip addr show ${IFACE} | awk '$2 ~ "192.168.9" {print $2}'`
   IP=${CIDR%%/24}
+  
+  # export ConsulKeygenOutput=`/usr/local/bin/consul keygen` [e.g. mUIJq6TITeenfVa2yMSi6yLwxrz2AYcC0dXissYpOxE=]
 
   if [ -d /vagrant ]; then
     LOG="/vagrant/logs/consul_${HOSTNAME}.log"
@@ -113,7 +57,7 @@ setup_environment () {
 install_prerequisite_binaries () {
 
     # check consul binary
-    [ -f /usr/local/bin/consul-force-install ] &>/dev/null || {
+    [ -f /usr/local/bin/consul ] &>/dev/null || {
         pushd /usr/local/bin
         [ -f consul_${consul_version}_linux_amd64.zip ] || {
             sudo wget -q https://releases.hashicorp.com/consul/${consul_version}/consul_${consul_version}_linux_amd64.zip
@@ -125,7 +69,7 @@ install_prerequisite_binaries () {
     }
 
     # check consul-template binary
-    [ -f /usr/local/bin/consul-template-force-install ] &>/dev/null || {
+    [ -f /usr/local/bin/consul-template ] &>/dev/null || {
         pushd /usr/local/bin
         [ -f consul-template_${consul_template_version}_linux_amd64.zip ] || {
             sudo wget -q https://releases.hashicorp.com/consul-template/${consul_template_version}/consul-template_${consul_template_version}_linux_amd64.zip
@@ -137,7 +81,7 @@ install_prerequisite_binaries () {
     }
 
     # check envconsul binary
-    [ -f /usr/local/bin/envconsul-force-install ] &>/dev/null || {
+    [ -f /usr/local/bin/envconsul ] &>/dev/null || {
         pushd /usr/local/bin
         [ -f envconsul_${env_consul_version}_linux_amd64.zip ] || {
             sudo wget -q https://releases.hashicorp.com/envconsul/${env_consul_version}/envconsul_${env_consul_version}_linux_amd64.zip
@@ -154,25 +98,10 @@ install_chef_inspec () {
     
     [ -f /usr/bin/inspec ] &>/dev/null || {
         pushd /tmp
-        [ -f ${inspec_package} ] || {
-            sudo wget -q ${inspec_package_url}
-        }
-        sudo apt-get install -y ./${inspec_package}
-        sudo rm ${inspec_package}
+        curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
         popd
     }    
 
-}
-
-install_demo_app() {
-  which http-echo &>/dev/null || {
-    pushd /usr/local/bin
-    sudo wget -q https://github.com/hashicorp/http-echo/releases/download/v0.2.3/http-echo_0.2.3_linux_amd64.zip
-    sudo unzip http-echo_0.2.3_linux_amd64.zip
-    chmod +x http-echo
-    rm http-echo_0.2.3_linux_amd64.zip
-    popd
-  }
 }
 
 install_terraform () {
@@ -191,15 +120,6 @@ install_terraform () {
 
 }
 
-configure_consul_certs() {
-  # copy the example certificates into the correct location - PLEASE CHANGE THESE FOR A PRODUCTION DEPLOYMENT
-  generate_certificate_config ${1} "/etc/pki/tls/private/server-key.pem" "/etc/pki/tls/certs/server.pem" "/etc/pki/tls/certs/consul-ca.pem" server
-  sudo groupadd consulcerts
-  sudo chgrp -R consulcerts /etc/pki/tls
-  sudo chmod -R 770 /etc/pki/tls
-
-}
-
 install_consul () {
   AGENT_CONFIG="-config-dir=/etc/consul.d -enable-script-checks=true"
 
@@ -208,28 +128,36 @@ install_consul () {
   export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
   export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
   export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
-  
-
 
   # check for consul hostname or travis => server
   if [[ "${HOSTNAME}" =~ "leader" ]] || [ "${TRAVIS}" == "true" ]; then
     echo "Starting a Consul Server"
-    configure_consul_certs true
+
+    # copy the example certificates into the correct location - PLEASE CHANGE THESE FOR A PRODUCTION DEPLOYMENT
+    generate_certificate_config true
+
     /usr/local/bin/consul members 2>/dev/null || {
       if [ "${TRAVIS}" == "true" ]; then
-        create_service_user consul
-        # ensure consul service has permissions to access certificates
-        sudo usermod -a -G consulcerts consul
-        sudo -u consul cp -r /usr/local/bootstrap/conf/consul.d/* /etc/consul.d/.
-        sudo -u consul /usr/local/bin/consul agent -server -log-level=debug -ui -client=127.0.0.1 -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -bootstrap-expect=1 >${LOG} &
+        sudo mkdir --parents /etc/consul.d/pki/tls/private/vault /etc/consul.d/pki/tls/certs/vault
+        sudo mkdir --parents /etc/consul.d/pki/tls/private/consul /etc/consul.d/pki/tls/certs/consul
+        sudo cp -r /usr/local/bootstrap/conf/consul.d/* /etc/consul.d/.
+        
+        sudo cp -r /usr/local/bootstrap/certificate-config/server-key.pem /etc/consul.d/pki/tls/private/consul/server-key.pem
+        sudo cp -r /usr/local/bootstrap/certificate-config/server.pem /etc/consul.d/pki/tls/certs/consul/server.pem
+        sudo cp -r /usr/local/bootstrap/certificate-config/consul-ca.pem /etc/consul.d/pki/tls/certs/consul/consul-ca.pem
+        
+        sudo ls -al /etc/consul.d/pki/tls/certs/consul/
+        sudo ls -al /etc/consul.d/pki/tls/private/consul/
+        sudo /usr/local/bin/consul agent -server -log-level=debug -ui -client=0.0.0.0 -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -bootstrap-expect=1 >${TRAVIS_BUILD_DIR}/${LOG} &
+        sleep 5
+        sudo ls -al ${TRAVIS_BUILD_DIR}/${LOG}
+        sudo cat ${TRAVIS_BUILD_DIR}/${LOG}
       else
-        create_service consul "HashiCorp Consul Server SD & KV Service" "/usr/local/bin/consul agent -server -log-level=debug -ui -client=127.0.0.1 -bind=${IP} ${AGENT_CONFIG} -grpc-port=8502 -data-dir=/usr/local/consul -bootstrap-expect=1"
-        # ensure consul service has permissions to access certificates
-        sudo usermod -a -G consulcerts consul
+        
+        sudo sed -i "/ExecStart=/c\ExecStart=/usr/local/bin/consul agent -server -log-level=debug -ui -client=0.0.0.0 -join=${IP} -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -bootstrap-expect=1" /etc/systemd/system/consul.service
         sudo -u consul cp -r /usr/local/bootstrap/conf/consul.d/* /etc/consul.d/.
-        # sudo -u consul /usr/local/bin/consul agent -server -log-level=debug -ui -client=127.0.0.1 -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -bootstrap-expect=1 >${LOG} &
+        sudo systemctl enable consul
         sudo systemctl start consul
-        sudo systemctl status consul
       fi
       sleep 15
       # upload vars to consul kv
@@ -244,18 +172,19 @@ install_consul () {
     }
   else
     echo "Starting a Consul Agent"
-    configure_consul_certs false
-    /usr/local/bin/consul members 2>/dev/null || {
+    
+    generate_certificate_config false
 
-        create_service consul "HashiCorp Consul Agent Service"  "/usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=${IP} ${AGENT_CONFIG} -grpc-port=8502 -data-dir=/usr/local/consul -join=${LEADER_IP}"
-        # ensure consul service has permissions to access certificates
-        sudo usermod -a -G consulcerts consul
+    /usr/local/bin/consul members 2>/dev/null || {
+        
+        sudo sed -i "/ExecStart=/c\ExecStart=/usr/local/bin/consul agent -log-level=debug -client=0.0.0.0 -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -join=${LEADER_IP}" /etc/systemd/system/consul.service
+
+        sudo systemctl enable consul
         sudo systemctl start consul
-        sudo systemctl status consul
+        echo $HOSTNAME
+        hostname
         sleep 15
     }
-
-    install_demo_app
   fi
 
   echo "Consul Service Started"
@@ -263,8 +192,7 @@ install_consul () {
 
 setup_environment
 install_prerequisite_binaries
-# install_chef_inspec # used for dev/test of scripts
-
-# install_terraform # used for testing only
+install_chef_inspec # used for dev/test of scripts
+install_terraform # used for testing only
 install_consul
 exit 0

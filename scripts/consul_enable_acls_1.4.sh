@@ -4,8 +4,8 @@ set -x
 setup_environment () {
     source /usr/local/bootstrap/var.env
 
-    IFACE=`route -n | awk '$1 == "192.168.99.0" {print $8;exit}'`
-    CIDR=`ip addr show ${IFACE} | awk '$2 ~ "192.168.99" {print $2}'`
+    IFACE=`route -n | awk '$1 == "192.168.9.0" {print $8;exit}'`
+    CIDR=`ip addr show ${IFACE} | awk '$2 ~ "192.168.9" {print $2}'`
     IP=${CIDR%%/24}
 
     if [ -d /vagrant ]; then
@@ -17,6 +17,7 @@ setup_environment () {
 
     if [ "${TRAVIS}" == "true" ]; then
     IP=${IP:-127.0.0.1}
+    LEADER_IP=${IP}
     fi
 
     # Configure consul environment variables for use with certificates 
@@ -24,6 +25,12 @@ setup_environment () {
     export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
     export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
     export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+
+    export VAULT_TOKEN=reallystrongpassword
+    export VAULT_ADDR=https://192.168.9.11:8322
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
     
 
     export AGENT_CONFIG="-config-dir=/etc/consul.d -enable-script-checks=true"
@@ -185,7 +192,7 @@ step6_verify_acl_config () {
 
 step7_enable_acl_on_client () {
 
-  AGENTTOKEN=`sudo cat /usr/local/bootstrap/.agenttoken_acl`
+  AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
   export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
 
   sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
@@ -207,7 +214,7 @@ EOF
 
 step8_verify_acl_config () {
 
-    AGENTTOKEN=`sudo cat /usr/local/bootstrap/.agenttoken_acl`
+    AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
 
     curl -s -w "\n%{http_code}" \
       --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
@@ -263,22 +270,33 @@ create_app_token () {
     address = "127.0.0.1:8321"
     scheme = "https"
     path    = "vault/"
-    tls_ca_file = "/etc/pki/tls/certs/consul-ca.pem"
-    tls_cert_file = "/etc/pki/tls/certs/server.pem"
-    tls_key_file = "/etc/pki/tls/private/server-key.pem"
+    tls_ca_file = "/etc/vault.d/pki/tls/certs/consul/consul-ca.pem"
+    tls_cert_file = "/etc/vault.d/pki/tls/certs/consul/server.pem"
+    tls_key_file = "/etc/vault.d/pki/tls/private/consul/server-key.pem"
     token = "${VAULTSESSIONTOKEN}"
   }
 
   ui = true
+
+  listener "tcp" {
+    address = "0.0.0.0:8322"
+    tls_disable = 0
+    tls_cert_file = "/etc/vault.d/pki/tls/certs/vault/hashistack-server.pem"
+    tls_key_file = "/etc/vault.d/pki/tls/private/vault/hashistack-server-key.pem"
+  }
+
+  # Advertise the non-loopback interface
+  api_addr = "https://${LEADER_IP}:8322"
+  cluster_addr = "https://${LEADER_IP}:8322"
 EOF
 
   sudo tee /usr/local/bootstrap/conf/nomad.d/nomad.hcl <<EOF
 consul {
   address = "127.0.0.1:8321"
   ssl       = true
-  ca_file   = "/etc/pki/tls/certs/consul-ca.pem"
-  cert_file = "/etc/pki/tls/certs/server.pem"
-  key_file  = "/etc/pki/tls/private/server-key.pem"
+  ca_file   = "/etc/nomad.d/pki/tls/certs/consul/consul-ca.pem"
+  cert_file = "/etc/nomad.d/pki/tls/certs/consul/server.pem"
+  key_file  = "/etc/nomad.d/pki/tls/private/consul/server-key.pem"
   token = "${CONSUL_HTTP_TOKEN}"
   }
 EOF
@@ -287,15 +305,15 @@ EOF
 
 step9_configure_nomad() {
 
-  AGENTTOKEN=`sudo cat /usr/local/bootstrap/.agenttoken_acl`
+  AGENTTOKEN=`vault kv get -field "value" kv/development/bootstraptoken`
 
   sudo tee /usr/local/bootstrap/conf/nomad.d/nomad.hcl <<EOF
 consul {
   address = "127.0.0.1:8321"
   ssl       = true
-  ca_file   = "/etc/pki/tls/certs/consul-ca.pem"
-  cert_file = "/etc/pki/tls/certs/server.pem"
-  key_file  = "/etc/pki/tls/private/server-key.pem"
+  ca_file   = "/etc/nomad.d/pki/tls/certs/consul/consul-ca.pem"
+  cert_file = "/etc/nomad.d/pki/tls/certs/consul/server.pem"
+  key_file  = "/etc/nomad.d/pki/tls/private/consul/server-key.pem"
   token = "${AGENTTOKEN}"
   }
 EOF
@@ -315,7 +333,7 @@ restart_consul () {
     else
         sudo systemctl restart consul
         sleep 15
-        sudo systemctl status consul
+        #sudo systemctl status consul
     fi
     
   
@@ -334,13 +352,13 @@ consul_acl_config () {
     step6_verify_acl_config
 
     # for vault backend
-    #create_app_token
+    create_app_token
     
   else
     echo "Configuring Consul ACLs on Agent"
     step7_enable_acl_on_client
     step8_verify_acl_config
-    #step9_configure_nomad
+    step9_configure_nomad
     
   fi
   
