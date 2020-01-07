@@ -18,5 +18,5 @@
   }
 
   # Advertise the non-loopback interface
-  api_addr = "https://192.168.99.11:8322"
-  cluster_addr = "https://192.168.99.11:8322"
+  api_addr = "https://192.168.4.11:8322"
+  cluster_addr = "https://192.168.4.11:8322"

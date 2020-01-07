@@ -4,8 +4,8 @@ set -x
 setup_environment () {
     source /usr/local/bootstrap/var.env
 
-    IFACE=`route -n | awk '$1 == "192.168.9.0" {print $8;exit}'`
-    CIDR=`ip addr show ${IFACE} | awk '$2 ~ "192.168.9" {print $2}'`
+    IFACE=`route -n | awk '$1 == "192.168.4.0" {print $8;exit}'`
+    CIDR=`ip addr show ${IFACE} | awk '$2 ~ "192.168.4" {print $2}'`
     IP=${CIDR%%/24}
 
     if [ -d /vagrant ]; then
@@ -27,7 +27,7 @@ setup_environment () {
     export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
 
     export VAULT_TOKEN=reallystrongpassword
-    export VAULT_ADDR=https://192.168.9.11:8322
+    export VAULT_ADDR=https://192.168.4.11:8322
     export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
     export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
     export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
@@ -192,7 +192,7 @@ step6_verify_acl_config () {
 
 step7_enable_acl_on_client () {
 
-  AGENTTOKEN=`cat /usr/local/bootstrap/.agenttoken_acl`
+  AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
   export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
 
   sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
@@ -214,7 +214,7 @@ EOF
 
 step8_verify_acl_config () {
 
-    AGENTTOKEN=`cat /usr/local/bootstrap/.agenttoken_acl`
+    AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
 
     curl -s -w "\n%{http_code}" \
       --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
@@ -305,7 +305,7 @@ EOF
 
 step9_configure_nomad() {
 
-  AGENTTOKEN=`cat /usr/local/bootstrap/.agenttoken_acl`
+  AGENTTOKEN=`vault kv get -field "value" kv/development/bootstraptoken`
 
   sudo tee /usr/local/bootstrap/conf/nomad.d/nomad.hcl <<EOF
 consul {

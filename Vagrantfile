@@ -19,11 +19,11 @@ Vagrant.configure("2") do |config|
 
     #override global variables to fit Vagrant setup
     ENV['LEADER_NAME']||="leader01"
-    ENV['LEADER_IP']||="192.168.99.11"
+    ENV['LEADER_IP']||="192.168.4.11"
     ENV['APPSERVER_NAME']||="app01"
-    ENV['APPSERVER_IP']||="192.168.99.101"
+    ENV['APPSERVER_IP']||="192.168.4.101"
     ENV['CLIENT_NAME']||="client01"
-    ENV['CLIENT_IP']||="192.168.99.201"        
+    ENV['CLIENT_IP']||="192.168.4.201"        
     
     #global config
     config.vm.synced_folder ".", "/vagrant"

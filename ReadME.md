@@ -20,9 +20,9 @@ The Consul `cluster` is already secured using TLS certificates and ACLs have bee
 ``` console
 consul members
 Node      Address             Status  Type    Build  Protocol  DC               Segment
-leader01  192.168.99.11:8301   alive   server  1.5.0  2         allthingscloud1  <all>
-app01     192.168.99.101:8301  alive   client  1.5.0  2         allthingscloud1  <default>
-client01  192.168.99.201:8301  alive   client  1.5.0  2         allthingscloud1  <default>
+leader01  192.168.4.11:8301   alive   server  1.5.0  2         allthingscloud1  <all>
+app01     192.168.4.101:8301  alive   client  1.5.0  2         allthingscloud1  <default>
+client01  192.168.4.201:8301  alive   client  1.5.0  2         allthingscloud1  <default>
 ```
 
 So first let's create an ACL tokens to be used to secure the application service and the client
@@ -787,7 +787,7 @@ rpcbind    483            root    8u  IPv4  15628      0t0  TCP *:111 (LISTEN)
 rpcbind    483            root   11u  IPv6  15631      0t0  TCP *:111 (LISTEN)
 sshd       572            root    3u  IPv4  17358      0t0  TCP *:22 (LISTEN)
 sshd       572            root    4u  IPv6  17369      0t0  TCP *:22 (LISTEN)
-consul    1419          consul    5u  IPv4  24092      0t0  TCP 192.168.99.201:8301 (LISTEN)
+consul    1419          consul    5u  IPv4  24092      0t0  TCP 192.168.4.201:8301 (LISTEN)
 consul    1419          consul    7u  IPv4  24095      0t0  TCP 127.0.0.1:8600 (LISTEN)
 consul    1419          consul    9u  IPv6  24101      0t0  TCP *:8321 (LISTEN)
 envoy     1823         vagrant    9u  IPv4  26982      0t0  TCP 127.0.0.1:19000 (LISTEN)
@@ -800,9 +800,9 @@ rpcbind    471            root   11u  IPv6  15633      0t0  TCP *:111 (LISTEN)
 systemd-r  472 systemd-resolve   13u  IPv4  15610      0t0  TCP 127.0.0.53:53 (LISTEN)
 sshd       560            root    3u  IPv4  17336      0t0  TCP *:22 (LISTEN)
 sshd       560            root    4u  IPv6  17347      0t0  TCP *:22 (LISTEN)
-consul    1650          consul    3u  IPv4  24892      0t0  TCP 192.168.99.11:8300 (LISTEN)
-consul    1650          consul    7u  IPv4  24893      0t0  TCP 192.168.99.11:8302 (LISTEN)
-consul    1650          consul   10u  IPv4  24895      0t0  TCP 192.168.99.11:8301 (LISTEN)
+consul    1650          consul    3u  IPv4  24892      0t0  TCP 192.168.4.11:8300 (LISTEN)
+consul    1650          consul    7u  IPv4  24893      0t0  TCP 192.168.4.11:8302 (LISTEN)
+consul    1650          consul   10u  IPv4  24895      0t0  TCP 192.168.4.11:8301 (LISTEN)
 consul    1650          consul   13u  IPv4  24901      0t0  TCP 127.0.0.1:8600 (LISTEN)
 consul    1650          consul   14u  IPv6  24906      0t0  TCP *:8321 (LISTEN)
 consul    1650          consul   15u  IPv4  24908      0t0  TCP 127.0.0.1:8502 (LISTEN)
@@ -815,7 +815,7 @@ rpcbind    472            root   11u  IPv6  15558      0t0  TCP *:111 (LISTEN)
 systemd-r  473 systemd-resolve   13u  IPv4  15610      0t0  TCP 127.0.0.53:53 (LISTEN)
 sshd       560            root    3u  IPv4  17217      0t0  TCP *:22 (LISTEN)
 sshd       560            root    4u  IPv6  17231      0t0  TCP *:22 (LISTEN)
-consul    1412          consul    5u  IPv4  24037      0t0  TCP 192.168.99.101:8301 (LISTEN)
+consul    1412          consul    5u  IPv4  24037      0t0  TCP 192.168.4.101:8301 (LISTEN)
 consul    1412          consul    8u  IPv4  24041      0t0  TCP 127.0.0.1:8600 (LISTEN)
 consul    1412          consul    9u  IPv6  24046      0t0  TCP *:8321 (LISTEN)
 http-echo 1726         vagrant    3u  IPv4  25931      0t0  TCP 127.0.0.1:9090 (LISTEN)
@@ -842,42 +842,42 @@ vagrant@leader01:~
 sudo grep -E 'consul|envoy' /var/log/syslog | grep -i -E 'err|join' | grep -v 'Skipping self join check'
 
 vagrant@leader01:~$ sudo grep -E 'consul|envoy' /var/log/syslog | grep -i -E 'err|join' | grep -v 'Skipping self join check'
-May 21 14:28:13 vagrant consul[1355]:     2019/05/21 14:28:13 [INFO] serf: EventMemberJoin: leader01.allthingscloud1 192.168.99.11
-May 21 14:28:13 vagrant consul[1355]:     2019/05/21 14:28:13 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
+May 21 14:28:13 vagrant consul[1355]:     2019/05/21 14:28:13 [INFO] serf: EventMemberJoin: leader01.allthingscloud1 192.168.4.11
+May 21 14:28:13 vagrant consul[1355]:     2019/05/21 14:28:13 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
 May 21 14:28:13 vagrant consul[1355]:     2019/05/21 14:28:13 [INFO] consul: Handled member-join event for server "leader01.allthingscloud1" in area "wan"
 May 21 14:28:18 vagrant consul[1355]:     2019/05/21 14:28:18 [INFO] consul: member 'leader01' joined, marking health alive
 May 21 14:28:28 vagrant consul[1355]:     2019/05/21 14:28:28 [DEBUG] http: Request PUT /v1/kv/development/terraform_version (1.415207ms) from=127.0.0.1:53156
-May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [INFO] serf: EventMemberJoin: leader01.allthingscloud1 192.168.99.11
-May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
+May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [INFO] serf: EventMemberJoin: leader01.allthingscloud1 192.168.4.11
+May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
 May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [WARN] serf: Failed to re-join any previously known node
 May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [WARN] serf: Failed to re-join any previously known node
 May 21 14:28:29 vagrant consul[1611]:     2019/05/21 14:28:29 [INFO] consul: Handled member-join event for server "leader01.allthingscloud1" in area "wan"
 May 21 14:28:37 vagrant consul[1611]:     2019/05/21 14:28:37 [ERR] agent: failed to sync remote state: No cluster leader
-May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [INFO] serf: EventMemberJoin: leader01.allthingscloud1 192.168.99.11
-May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
+May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [INFO] serf: EventMemberJoin: leader01.allthingscloud1 192.168.4.11
+May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
 May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [WARN] serf: Failed to re-join any previously known node
 May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [WARN] serf: Failed to re-join any previously known node
 May 21 14:28:45 vagrant consul[1650]:     2019/05/21 14:28:45 [INFO] consul: Handled member-join event for server "leader01.allthingscloud1" in area "wan"
 May 21 14:28:52 vagrant consul[1650]:     2019/05/21 14:28:52 [ERR] agent: failed to sync remote state: No cluster leader
 May 21 14:29:00 vagrant consul[1650]:     2019/05/21 14:29:00 [DEBUG] http: Request PUT /v1/kv/development/terraform_version (1.460408ms) from=127.0.0.1:53224
-May 21 14:29:44 vagrant consul[1650]:     2019/05/21 14:29:44 [INFO] serf: EventMemberJoin: app01 192.168.99.101
+May 21 14:29:44 vagrant consul[1650]:     2019/05/21 14:29:44 [INFO] serf: EventMemberJoin: app01 192.168.4.101
 May 21 14:29:44 vagrant consul[1650]:     2019/05/21 14:29:44 [INFO] consul: member 'app01' joined, marking health alive
 May 21 14:29:44 vagrant consul[1650]:     2019/05/21 14:29:44 [DEBUG] serf: messageJoinType: app01
 May 21 14:29:44 vagrant consul[1650]:     2019/05/21 14:29:44 [DEBUG] serf: messageJoinType: app01
 May 21 14:29:45 vagrant consul[1650]:     2019/05/21 14:29:45 [DEBUG] serf: messageJoinType: app01
 May 21 14:29:45 vagrant consul[1650]:     2019/05/21 14:29:45 [DEBUG] serf: messageJoinType: app01
-May 21 14:30:08 vagrant consul[1650]:     2019/05/21 14:30:08 [INFO] serf: EventMemberJoin: app01 192.168.99.101
+May 21 14:30:08 vagrant consul[1650]:     2019/05/21 14:30:08 [INFO] serf: EventMemberJoin: app01 192.168.4.101
 May 21 14:30:08 vagrant consul[1650]:     2019/05/21 14:30:08 [DEBUG] serf: messageJoinType: app01
 May 21 14:30:08 vagrant consul[1650]:     2019/05/21 14:30:08 [DEBUG] serf: messageJoinType: app01
 May 21 14:30:08 vagrant consul[1650]:     2019/05/21 14:30:08 [INFO] consul: member 'app01' joined, marking health alive
 May 21 14:30:09 vagrant consul[1650]:     2019/05/21 14:30:09 [DEBUG] serf: messageJoinType: app01
 May 21 14:30:09 vagrant consul[1650]: message repeated 5 times: [     2019/05/21 14:30:09 [DEBUG] serf: messageJoinType: app01]
-May 21 14:31:12 vagrant consul[1650]:     2019/05/21 14:31:12 [INFO] serf: EventMemberJoin: client01 192.168.99.201
+May 21 14:31:12 vagrant consul[1650]:     2019/05/21 14:31:12 [INFO] serf: EventMemberJoin: client01 192.168.4.201
 May 21 14:31:12 vagrant consul[1650]:     2019/05/21 14:31:12 [INFO] consul: member 'client01' joined, marking health alive
 May 21 14:31:13 vagrant consul[1650]:     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:13 vagrant consul[1650]:     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:13 vagrant consul[1650]: message repeated 2 times: [     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01]
-May 21 14:31:34 vagrant consul[1650]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: client01 192.168.99.201
+May 21 14:31:34 vagrant consul[1650]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: client01 192.168.4.201
 May 21 14:31:34 vagrant consul[1650]:     2019/05/21 14:31:34 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:34 vagrant consul[1650]:     2019/05/21 14:31:34 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:34 vagrant consul[1650]:     2019/05/21 14:31:34 [INFO] consul: member 'client01' joined, marking health alive
@@ -905,36 +905,36 @@ vagrant@app01:~$ systemctl status consul
  Main PID: 1412 (consul)
     Tasks: 8 (limit: 1113)
    CGroup: /system.slice/consul.service
-           └─1412 /usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=192.168.99.101 -conf
+           └─1412 /usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=192.168.4.101 -conf
 lines 1-9/9 (END)
 
 vagrant@app01:~$ sudo grep -E 'consul|envoy' /var/log/syslog | grep -i -E 'err|join'
 May 21 14:29:44 vagrant consul[1347]: ==> Joining cluster...
 May 21 14:29:44 vagrant consul[1347]:     Join completed. Synced with 1 initial agents
-May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] serf: EventMemberJoin: app01 192.168.99.101
-May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] agent: (LAN) joining: [192.168.99.11]
-May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
+May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] serf: EventMemberJoin: app01 192.168.4.101
+May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] agent: (LAN) joining: [192.168.4.11]
+May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
 May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [INFO] agent: (LAN) joined: 1 Err: <nil>
-May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.99.11:8300: rpc error making call: Permission denied
+May 21 14:29:44 vagrant consul[1347]:     2019/05/21 14:29:44 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.4.11:8300: rpc error making call: Permission denied
 May 21 14:29:45 vagrant consul[1347]:     2019/05/21 14:29:45 [DEBUG] serf: messageJoinType: app01
 May 21 14:29:45 vagrant consul[1347]:     2019/05/21 14:29:45 [DEBUG] serf: messageJoinType: app01
 May 21 14:29:45 vagrant consul[1347]:     2019/05/21 14:29:45 [DEBUG] serf: messageJoinType: app01
 May 21 14:29:45 vagrant consul[1347]:     2019/05/21 14:29:45 [DEBUG] serf: messageJoinType: app01
-May 21 14:29:47 vagrant consul[1347]:     2019/05/21 14:29:47 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.99.11:8300: rpc error making call: Permission denied
-May 21 14:30:08 vagrant consul[1347]:     2019/05/21 14:30:08 [ERR] memberlist: Failed to send ping: write udp 192.168.99.101:8301->192.168.99.11:8301: use of closed network connection
+May 21 14:29:47 vagrant consul[1347]:     2019/05/21 14:29:47 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.4.11:8300: rpc error making call: Permission denied
+May 21 14:30:08 vagrant consul[1347]:     2019/05/21 14:30:08 [ERR] memberlist: Failed to send ping: write udp 192.168.4.101:8301->192.168.4.11:8301: use of closed network connection
 May 21 14:30:09 vagrant consul[1412]: ==> Joining cluster...
 May 21 14:30:09 vagrant consul[1412]:     Join completed. Synced with 1 initial agents
-May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:08 [INFO] serf: EventMemberJoin: app01 192.168.99.101
-May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:09 [INFO] agent: (LAN) joining: [192.168.99.11]
-May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:09 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
+May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:08 [INFO] serf: EventMemberJoin: app01 192.168.4.101
+May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:09 [INFO] agent: (LAN) joining: [192.168.4.11]
+May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:09 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
 May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:09 [INFO] agent: (LAN) joined: 1 Err: <nil>
 May 21 14:30:09 vagrant consul[1412]:     2019/05/21 14:30:09 [DEBUG] serf: messageJoinType: app01
 May 21 14:30:09 vagrant consul[1412]: message repeated 3 times: [     2019/05/21 14:30:09 [DEBUG] serf: messageJoinType: app01]
 May 21 14:30:24 vagrant consul[1412]:     2019/05/21 14:30:24 [DEBUG] http: Request PUT /v1/kv/development/terraform_version (2.196139ms) from=127.0.0.1:37746
-May 21 14:31:13 vagrant consul[1412]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: client01 192.168.99.201
+May 21 14:31:13 vagrant consul[1412]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: client01 192.168.4.201
 May 21 14:31:13 vagrant consul[1412]:     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:13 vagrant consul[1412]: message repeated 3 times: [     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01]
-May 21 14:31:34 vagrant consul[1412]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: client01 192.168.99.201
+May 21 14:31:34 vagrant consul[1412]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: client01 192.168.4.201
 May 21 14:31:34 vagrant consul[1412]:     2019/05/21 14:31:34 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:34 vagrant consul[1412]: message repeated 5 times: [     2019/05/21 14:31:34 [DEBUG] serf: messageJoinType: client01]
 vagrant@app01:~$
@@ -953,29 +953,29 @@ vagrant@client01:~$ systemctl status consul
  Main PID: 1419 (consul)
     Tasks: 8 (limit: 1113)
    CGroup: /system.slice/consul.service
-           └─1419 /usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=192.168.99.201 -conf
+           └─1419 /usr/local/bin/consul agent -log-level=debug -client=127.0.0.1 -bind=192.168.4.201 -conf
 vagrant@client01:~$
 vagrant@client01:~$ sudo grep -E 'consul|envoy' /var/log/syslog | grep -i -E 'err|join'
 May 21 14:31:13 vagrant consul[1356]: ==> Joining cluster...
 May 21 14:31:13 vagrant consul[1356]:     Join completed. Synced with 1 initial agents
-May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: client01 192.168.99.201
-May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] agent: (LAN) joining: [192.168.99.11]
-May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
-May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: app01 192.168.99.101
+May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: client01 192.168.4.201
+May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] agent: (LAN) joining: [192.168.4.11]
+May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
+May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] serf: EventMemberJoin: app01 192.168.4.101
 May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [INFO] agent: (LAN) joined: 1 Err: <nil>
-May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.99.11:8300: rpc error making call: Permission denied
+May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.4.11:8300: rpc error making call: Permission denied
 May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01
-May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.99.11:8300: rpc error making call: Permission denied
+May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [ERR] consul: "Catalog.Register" RPC failed to server 192.168.4.11:8300: rpc error making call: Permission denied
 May 21 14:31:13 vagrant consul[1356]:     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:13 vagrant consul[1356]: message repeated 2 times: [     2019/05/21 14:31:13 [DEBUG] serf: messageJoinType: client01]
-May 21 14:31:28 vagrant consul[1356]:     2019/05/21 14:31:28 [ERR] consul: "Coordinate.Update" RPC failed to server 192.168.99.11:8300: rpc error making call: Permission denied
-May 21 14:31:34 vagrant consul[1356]:     2019/05/21 14:31:34 [ERR] memberlist: Failed to send ping: write udp 192.168.99.201:8301->192.168.99.11:8301: use of closed network connection
+May 21 14:31:28 vagrant consul[1356]:     2019/05/21 14:31:28 [ERR] consul: "Coordinate.Update" RPC failed to server 192.168.4.11:8300: rpc error making call: Permission denied
+May 21 14:31:34 vagrant consul[1356]:     2019/05/21 14:31:34 [ERR] memberlist: Failed to send ping: write udp 192.168.4.201:8301->192.168.4.11:8301: use of closed network connection
 May 21 14:31:34 vagrant consul[1419]: ==> Joining cluster...
 May 21 14:31:34 vagrant consul[1419]:     Join completed. Synced with 1 initial agents
-May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: client01 192.168.99.201
-May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] agent: (LAN) joining: [192.168.99.11]
-May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: app01 192.168.99.101
-May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: leader01 192.168.99.11
+May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: client01 192.168.4.201
+May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] agent: (LAN) joining: [192.168.4.11]
+May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: app01 192.168.4.101
+May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] serf: EventMemberJoin: leader01 192.168.4.11
 May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [INFO] agent: (LAN) joined: 1 Err: <nil>
 May 21 14:31:34 vagrant consul[1419]:     2019/05/21 14:31:34 [DEBUG] serf: messageJoinType: client01
 May 21 14:31:34 vagrant consul[1419]: message repeated 3 times: [     2019/05/21 14:31:34 [DEBUG] serf: messageJoinType: client01]
@@ -984,3 +984,42 @@ May 21 14:31:49 vagrant consul[1419]:     2019/05/21 14:31:49 [DEBUG] http: Requ
 
 
 # This is not currently working and requires further debug !!!!!!
+
+
+Aside Certification Creation:
+``` console
+root@leader010:~# consul tls ca create
+==> Saved consul-agent-ca.pem
+==> Saved consul-agent-ca-key.pem
+root@leader010:~#
+
+consul tls cert create -server \
+    -additional-dnsname="leader01" \
+    -additional-dnsname="leader01.hashistack.ie" \
+    -additional-ipaddress="192.168.4.11" \
+    -additional-ipaddress="192.168.9.11" \
+    -additional-ipaddress="192.168.99.11" \
+    -additional-ipaddress="127.0.0.1" \
+
+root@leader010:~# consul tls cert create -server     -additional-dnsname="leader01"     -additional-dnsname="leader01.hashistack.ie"     -additional-ipaddress="192.168.4.11"     -additional-ipaddress="192.168.9.11"     -additional-ipaddress="192.168.99.11"     -additional-ipaddress="127.0.0.1"
+==> WARNING: Server Certificates grants authority to become a
+    server and access all state in the cluster including root keys
+    and all ACL tokens. Do not distribute them to production hosts
+    that are not server nodes. Store them as securely as CA keys.
+==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
+==> Saved dc1-server-consul-0.pem
+==> Saved dc1-server-consul-0-key.pem
+
+root@leader010:~# consul tls cert create -client
+==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
+==> Saved dc1-client-consul-0.pem
+==> Saved dc1-client-consul-0-key.pem
+
+root@leader010:~# consul tls cert create -cli
+==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
+==> Saved dc1-cli-consul-0.pem
+==> Saved dc1-cli-consul-0-key.pem
+root@leader010:~#
+
+
+```
