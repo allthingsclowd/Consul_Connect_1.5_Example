@@ -48,6 +48,7 @@ Vagrant.configure("2") do |config|
     config.vm.define "app01" do |app01|
         app01.vm.hostname = ENV['APPSERVER_NAME']
         app01.vm.network "private_network", ip: ENV['APPSERVER_IP']
+        app01.vm.provision "shell", inline: "/usr/local/bootstrap/scripts/install_demo_app.sh", run: "always"
     end
 
     config.vm.define "client01" do |client01|
