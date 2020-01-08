@@ -55,15 +55,24 @@ create_acl_policy () {
 
 step1_enable_acls_on_server () {
 
-  sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
-  {
-    "primary_datacenter": "allthingscloud1",
-    "acl" : {
-      "enabled" : true,
-      "default_policy" : "deny",
-      "down_policy" : "extend-cache"
+#   sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
+#   {
+#     "primary_datacenter": "allthingscloud1",
+#     "acl" : {
+#       "enabled" : true,
+#       "default_policy" : "deny",
+#       "down_policy" : "extend-cache"
+#     }
+#   }
+# EOF
+
+  sudo tee /etc/consul.d/consul_acl_1.4_server_setup.hcl <<EOF 
+primary_datacenter = "allthingscloud1"
+acl {
+    enabled = true
+    default_policy = "deny"
+    down_policy = "extend-cache"
     }
-  }
 EOF
   # read in new configs
   restart_consul
@@ -146,18 +155,30 @@ step4_create_an_agent_token () {
 
 step5_add_agent_token_on_server () {
 
-  sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
-  {
-  "primary_datacenter": "allthingscloud1",
-  "acl" : {
-    "enabled" : true,
-    "default_policy" : "deny",
-    "down_policy" : "extend-cache",
-    "tokens" : {
-      "agent" : "${AGENTTOKEN}"
+#   sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
+#   {
+#   "primary_datacenter": "allthingscloud1",
+#   "acl" : {
+#     "enabled" : true,
+#     "default_policy" : "deny",
+#     "down_policy" : "extend-cache",
+#     "tokens" : {
+#       "agent" : "${AGENTTOKEN}"
+#     }
+#   }
+# }
+# EOF
+
+  sudo tee /etc/consul.d/consul_acl_1.4_server_setup.hcl <<EOF 
+primary_datacenter = "allthingscloud1"
+acl {
+    enabled = true
+    default_policy = "deny"
+    down_policy = "extend-cache"
+    tokens {
+        agent = "${AGENTTOKEN}"
+            }
     }
-  }
-}
 EOF
   # read in new configs
   restart_consul
@@ -195,17 +216,27 @@ step7_enable_acl_on_client () {
   AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
   export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
 
-  sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
-  {
-  "acl" : {
-    "enabled" : true,
-    "default_policy" : "deny",
-    "down_policy" : "extend-cache",
-    "tokens" : {
-      "agent" : "${AGENTTOKEN}"
-    }
+#   sudo tee /etc/consul.d/consul_acl_1.4_setup.json <<EOF
+#   {
+#   "acl" : {
+#     "enabled" : true,
+#     "default_policy" : "deny",
+#     "down_policy" : "extend-cache",
+#     "tokens" : {
+#       "agent" : "${AGENTTOKEN}"
+#     }
+#   }
+# }
+# EOF
+  sudo tee /etc/consul.d/consul_acl_1.4_setup.hcl <<EOF
+  acl {
+      enabled =  true
+      default_policy = "deny"
+      down_policy =  "extend-cache"
+      tokens {
+          agent = "${AGENTTOKEN}"
+              }
   }
-}
 EOF
   # read in new configs
   restart_consul

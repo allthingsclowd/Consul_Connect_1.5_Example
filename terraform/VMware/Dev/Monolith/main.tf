@@ -98,6 +98,10 @@ resource "vsphere_virtual_machine" "leader010vm" {
 
     inline = [
         "touch /tmp/cloudinit-start.txt",
+        "sudo chmod -R 777 /usr/local/bootstrap/",
+        "sudo ls -al /usr/local/bootstrap/",
+        "sudo ls -al /usr/local/bootstrap/scripts",
+        "sudo /usr/local/bootstrap/scripts/copy_certificates_into_place.sh",
         "sudo /usr/local/bootstrap/scripts/install_consul.sh",
         "sudo /usr/local/bootstrap/scripts/consul_enable_acls_1.4.sh",
         "sudo /usr/local/bootstrap/scripts/install_vault.sh",
@@ -173,6 +177,10 @@ resource "vsphere_virtual_machine" "app01vm" {
 
     inline = [
         "touch /tmp/cloudinit-start.txt",
+        "sudo chmod -R 777 /usr/local/bootstrap/",
+        "sudo ls -al /usr/local/bootstrap/",
+        "sudo ls -al /usr/local/bootstrap/scripts",
+        "sudo /usr/local/bootstrap/scripts/copy_certificates_into_place.sh",
         "sudo /usr/local/bootstrap/scripts/install_consul.sh",
         "sudo /usr/local/bootstrap/scripts/consul_enable_acls_1.4.sh",
         "sudo /usr/local/bootstrap/scripts/install_demo_app.sh",
@@ -256,6 +264,10 @@ resource "vsphere_virtual_machine" "client01vm" {
 
     inline = [
         "touch /tmp/cloudinit-start.txt",
+        "sudo chmod -R 777 /usr/local/bootstrap/",
+        "sudo ls -al /usr/local/bootstrap/",
+        "sudo ls -al /usr/local/bootstrap/scripts",
+        "sudo /usr/local/bootstrap/scripts/copy_certificates_into_place.sh",
         "sudo /usr/local/bootstrap/scripts/install_consul.sh",
         "sudo /usr/local/bootstrap/scripts/consul_enable_acls_1.4.sh",
         "touch /tmp/cloudinit-finish.txt",

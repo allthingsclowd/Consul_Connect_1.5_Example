@@ -5,29 +5,61 @@ generate_certificate_config () {
     sudo mkdir --parents /etc/consul.d
   fi
 
-  sudo tee /etc/consul.d/consul_cert_setup.json <<EOF
-  {
-  "datacenter": "allthingscloud1",
-  "data_dir": "/usr/local/consul",
-  "encrypt" : "${ConsulKeygenOutput}",
-  "log_level": "INFO",
-  "server": ${1},
-  "node_name": "${HOSTNAME}",
-  "addresses": {
-      "https": "0.0.0.0"
-  },
-  "ports": {
-      "https": 8321,
-      "http": -1,
-      "grpc": 8502
-  },
-  "verify_incoming": true,
-  "verify_outgoing": true,
-  "key_file": "/etc/consul.d/pki/tls/private/consul/server-key.pem",
-  "cert_file": "/etc/consul.d/pki/tls/certs/consul/server.pem",
-  "ca_file": "/etc/consul.d/pki/tls/certs/consul/consul-ca.pem"
-  }
+#   sudo tee /etc/consul.d/consul_cert_setup.json <<EOF
+#   {
+#   "datacenter": "allthingscloud1",
+#   "data_dir": "/usr/local/consul",
+#   "encrypt" : "${ConsulKeygenOutput}",
+#   "log_level": "INFO",
+#   "server": ${1},
+#   "node_name": "${HOSTNAME}",
+#   "addresses": {
+#       "https": "0.0.0.0"
+#   },
+#   "ports": {
+#       "https": 8321,
+#       "http": -1,
+#       "grpc": 8502
+#   },
+#   "verify_incoming": true,
+#   "verify_outgoing": true,
+#   "key_file": "/etc/consul.d/pki/tls/private/consul/server-key.pem",
+#   "cert_file": "/etc/consul.d/pki/tls/certs/consul/server.pem",
+#   "ca_file": "/etc/consul.d/pki/tls/certs/consul/consul-ca.pem"
+#   }
+# EOF
+
+  sudo tee /etc/consul.d/consul_ssl_setup.hcl <<EOF
+
+datacenter = "allthingscloud1"
+data_dir = "/usr/local/consul"
+encrypt = "mUIJq6TITeenfVa2yMSi6yLwxrz2AYcC0dXissYpOxE="
+log_level = "INFO"
+server = ${1}
+node_name = "${HOSTNAME}"
+addresses {
+    https = "0.0.0.0"
+}
+ports {
+    https = 8321
+    http = -1
+    grpc = 8502
+}
+connect {
+    enabled = true
+}
+verify_incoming = true
+verify_outgoing = true
+key_file = "/etc/consul.d/pki/tls/private/consul/server-key.pem"
+cert_file = "/etc/consul.d/pki/tls/certs/consul/server.pem"
+ca_file = "/etc/consul.d/pki/tls/certs/consul/consul-ca.pem"
 EOF
+
+
+
+
+
+
 
 }
 

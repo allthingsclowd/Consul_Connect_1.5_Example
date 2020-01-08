@@ -2,16 +2,66 @@
 
 ## Prerequisites
 
-Clone this repo and perform a vargrant up
+- Created TLS certificates for Consul following using [consul tls cert create](https://www.consul.io/docs/commands/tls/cert.html)
 
-e.g.
+  Note: I also used the same certs for Vault as this is just an evaluation and they're running on the same host.
 
-``` console
-git clone git@github.com:allthingsclowd/Consul_Connect_Envoy_Example.git
-cd Consul_Connect_Envoy_Example
-vagrant up
+```console
+root@leader010:~# consul tls cert create -server     -additional-dnsname="leader01"     -additional-dnsname="leader01.hashistack.ie"     -additional-ipaddress="192.168.4.11"     -additional-ipaddress="192.168.9.11"     -additional-ipaddress="192.168.99.11"     -additional-ipaddress="127.0.0.1"
+==> WARNING: Server Certificates grants authority to become a
+    server and access all state in the cluster including root keys
+    and all ACL tokens. Do not distribute them to production hosts
+    that are not server nodes. Store them as securely as CA keys.
+==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
+==> Saved dc1-server-consul-0.pem
+==> Saved dc1-server-consul-0-key.pem
+
+root@leader010:~# consul tls cert create -client
+==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
+==> Saved dc1-client-consul-0.pem
+==> Saved dc1-client-consul-0-key.pem
+
+root@leader010:~# consul tls cert create -cli
+==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
+==> Saved dc1-cli-consul-0.pem
+==> Saved dc1-cli-consul-0-key.pem
+root@leader010:~#
 ```
 
+- Vault Configuration (not really relevant here)
+
+```console
+root@leader010:~# cat /etc/vault.d/vault.hcl
+  storage "consul" {
+    address = "127.0.0.1:8321"
+    scheme = "https"
+    path    = "vault/"
+    tls_ca_file = "/etc/vault.d/pki/tls/certs/consul/consul-ca.pem"
+    tls_cert_file = "/etc/vault.d/pki/tls/certs/consul/server.pem"
+    tls_key_file = "/etc/vault.d/pki/tls/private/consul/server-key.pem"
+    token = "0d6ba18f-5057-5bae-3018-24eadf2f399e"
+  }
+
+  ui = true
+
+  listener "tcp" {
+    address = "0.0.0.0:8322"
+    tls_disable = 0
+    tls_cert_file = "/etc/vault.d/pki/tls/certs/vault/hashistack-server.pem"
+    tls_key_file = "/etc/vault.d/pki/tls/private/vault/hashistack-server-key.pem"
+  }
+
+  # Advertise the non-loopback interface
+  api_addr = "https://192.168.4.11:8322"
+  cluster_addr = "https://192.168.4.11:8322"
+root@leader010:~#
+```
+
+- Consul Configuration
+
+```console
+
+```
 This will create a demo consul environment with one consul server (leader01) and two consul clients (app01 & client01).
 The Consul `cluster` is already secured using TLS certificates and ACLs have been enabled.
 
@@ -31,13 +81,23 @@ So first let's create an ACL tokens to be used to secure the application service
 
 vagrant ssh leader01
 
-BOOTSTRAPACL=`cat /usr/local/bootstrap/.bootstrap_acl`
-export CONSUL_HTTP_TOKEN=${BOOTSTRAPACL}
-echo ${CONSUL_HTTP_TOKEN}
+# Configure consul & vault environment variables for use with certificates 
 export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
 export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
 export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+
+export VAULT_TOKEN=reallystrongpassword
+export VAULT_ADDR=https://192.168.4.11:8322
+export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
+export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
+export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+
+AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
+export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
+export CONSUL_HTTP_SSL=true
+export CONSUL_GRPC_ADDR=127.0.0.1:8502
+
 
 create_acl_policy () {
 
@@ -97,18 +157,32 @@ SERVICETOKEN=$(curl \
 We'll use this token now on the app01 node when configuring it's service definition
 In another session window login to the app01 node
 
+Store the token in Vault
+
+vault kv put kv/development/SERVICETOKEN value=${SERVICETOKEN}
+
 ``` console
 
 vagrant ssh app01
 
-SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
-export CONSUL_HTTP_TOKEN=${SERVICETOKEN}
-echo ${CONSUL_HTTP_TOKEN}
+# Configure consul & vault environment variables for use with certificates 
 export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
 export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
 export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+
+export VAULT_TOKEN=reallystrongpassword
+export VAULT_ADDR=https://192.168.4.11:8322
+export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
+export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
+export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+
 export CONSUL_HTTP_SSL=true
+export CONSUL_GRPC_ADDR=127.0.0.1:8502
+
+SERVICETOKEN=`vault kv get -field "value" kv/development/SERVICETOKEN`
+export CONSUL_HTTP_TOKEN=${SERVICETOKEN}
+echo ${CONSUL_HTTP_TOKEN}
 
   # configure http-echo service definition
   tee httpecho_service.json <<EOF
@@ -148,14 +222,23 @@ Login to the client01 and register the client service
 
 vagrant ssh client01
 
-SERVICETOKEN=`cat /usr/local/bootstrap/.httpservicetoken_acl`
-export CONSUL_HTTP_TOKEN=${SERVICETOKEN}
-echo ${CONSUL_HTTP_TOKEN}
 export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
 export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
 export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+
+export VAULT_TOKEN=reallystrongpassword
+export VAULT_ADDR=https://192.168.4.11:8322
+export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
+export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
+export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+
 export CONSUL_HTTP_SSL=true
+export CONSUL_GRPC_ADDR=127.0.0.1:8502
+
+SERVICETOKEN=`vault kv get -field "value" kv/development/SERVICETOKEN`
+export CONSUL_HTTP_TOKEN=${SERVICETOKEN}
+echo ${CONSUL_HTTP_TOKEN}
 
 
   # configure http-echo service definition
@@ -988,7 +1071,7 @@ May 21 14:31:49 vagrant consul[1419]:     2019/05/21 14:31:49 [DEBUG] http: Requ
 
 Aside Certification Creation:
 ``` console
-root@leader010:~# consul tls ca create
+root@leader010:~# consul tls vault-ca create
 ==> Saved consul-agent-ca.pem
 ==> Saved consul-agent-ca-key.pem
 root@leader010:~#
@@ -999,27 +1082,260 @@ consul tls cert create -server \
     -additional-ipaddress="192.168.4.11" \
     -additional-ipaddress="192.168.9.11" \
     -additional-ipaddress="192.168.99.11" \
-    -additional-ipaddress="127.0.0.1" \
+    -additional-ipaddress="127.0.0.1"
 
-root@leader010:~# consul tls cert create -server     -additional-dnsname="leader01"     -additional-dnsname="leader01.hashistack.ie"     -additional-ipaddress="192.168.4.11"     -additional-ipaddress="192.168.9.11"     -additional-ipaddress="192.168.99.11"     -additional-ipaddress="127.0.0.1"
-==> WARNING: Server Certificates grants authority to become a
-    server and access all state in the cluster including root keys
-    and all ACL tokens. Do not distribute them to production hosts
-    that are not server nodes. Store them as securely as CA keys.
-==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
-==> Saved dc1-server-consul-0.pem
-==> Saved dc1-server-consul-0-key.pem
 
-root@leader010:~# consul tls cert create -client
-==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
-==> Saved dc1-client-consul-0.pem
-==> Saved dc1-client-consul-0-key.pem
 
-root@leader010:~# consul tls cert create -cli
-==> Using consul-agent-ca.pem and consul-agent-ca-key.pem
-==> Saved dc1-cli-consul-0.pem
-==> Saved dc1-cli-consul-0-key.pem
-root@leader010:~#
-
+consul tls cert create vault -server \
+    -additional-dnsname="leader01" \
+    -additional-dnsname="leader01.hashistack.ie" \
+    -additional-ipaddress="192.168.4.11" \
+    -additional-ipaddress="192.168.9.11" \
+    -additional-ipaddress="192.168.99.11" \
+    -additional-ipaddress="127.0.0.1"
 
 ```
+
+Verifying Vault and Consul Server Connectivity...
+
+```console
+root@app01:~# openssl s_client -connect 192.168.4.11:8322
+CONNECTED(00000005)
+depth=0 CN = server.dc1.consul
+verify error:num=20:unable to get local issuer certificate
+verify return:1
+depth=0 CN = server.dc1.consul
+verify error:num=21:unable to verify the first certificate
+verify return:1
+---
+Certificate chain
+ 0 s:CN = server.dc1.consul
+   i:C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIC2TCCAn6gAwIBAgIRAMeag4LNcNz6+oXV4BEUuTIwCgYIKoZIzj0EAwIwgbkx
+CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
+bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
+FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
+IDI3MzcxMzMxMjgxNTE5NTk2ODgyNDI4MjcyOTA0MDg2ODY1NDI5MTAeFw0yMDAx
+MDcxMjI3MTNaFw0yMTAxMDYxMjI3MTNaMBwxGjAYBgNVBAMTEXNlcnZlci5kYzEu
+Y29uc3VsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUgLf6HrDKCASodZ5vQIW
+Khh8RLBjGjz/Fs4pPQGA7QKjLQ/gGENr2mTwC4x9sroINn0icM0BYqMptaeIJYZq
+ZaOCAQEwgf4wDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggr
+BgEFBQcDAjAMBgNVHRMBAf8EAjAAMCkGA1UdDgQiBCCOiR3HIURsmqI6lUd1WFlx
+dCEBCMTKxV8FdkmxBQ/2HDArBgNVHSMEJDAigCBK4qiJX//ct3PcH25DpwOof8wF
+KtxUdJYSCf6WfHj8gzBnBgNVHREEYDBegghsZWFkZXIwMYIWbGVhZGVyMDEuaGFz
+aGlzdGFjay5pZYIRc2VydmVyLmRjMS5jb25zdWyCCWxvY2FsaG9zdIcEwKgEC4cE
+wKgJC4cEwKhjC4cEfwAAAYcEfwAAATAKBggqhkjOPQQDAgNJADBGAiEAt9LeH9qH
++kibJvAdIsz04/vUrB5LclC7Hdvxth/qUD4CIQC4bqNijEAf031ClE2h0LPBffct
+1WaULDyj2ckHiGQhAA==
+-----END CERTIFICATE-----
+subject=CN = server.dc1.consul
+
+issuer=C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+
+---
+No client certificate CA names sent
+Client Certificate Types: RSA sign, ECDSA sign
+Requested Signature Algorithms: RSA+SHA256:ECDSA+SHA256:RSA+SHA384:ECDSA+SHA384:RSA+SHA512:ECDSA+SHA512:RSA+SHA1:ECDSA+SHA1
+Shared Requested Signature Algorithms: RSA+SHA256:ECDSA+SHA256:RSA+SHA384:ECDSA+SHA384:RSA+SHA512:ECDSA+SHA512:RSA+SHA1:ECDSA+SHA1
+Peer signing digest: SHA256
+Peer signature type: ECDSA
+Server Temp Key: X25519, 253 bits
+---
+SSL handshake has read 1152 bytes and written 419 bytes
+Verification error: unable to verify the first certificate
+---
+New, TLSv1.2, Cipher is ECDHE-ECDSA-AES256-GCM-SHA384
+Server public key is 256 bit
+Secure Renegotiation IS supported
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+SSL-Session:
+root@app01:~# openssl s_client -connect 192.168.4.11:8322
+CONNECTED(00000005)
+depth=0 CN = server.dc1.consul
+verify error:num=20:unable to get local issuer certificate
+verify return:1
+depth=0 CN = server.dc1.consul
+verify error:num=21:unable to verify the first certificate
+verify return:1
+---
+Certificate chain
+ 0 s:CN = server.dc1.consul
+   i:C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIC2TCCAn6gAwIBAgIRAMeag4LNcNz6+oXV4BEUuTIwCgYIKoZIzj0EAwIwgbkx
+CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
+bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
+FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
+IDI3MzcxMzMxMjgxNTE5NTk2ODgyNDI4MjcyOTA0MDg2ODY1NDI5MTAeFw0yMDAx
+MDcxMjI3MTNaFw0yMTAxMDYxMjI3MTNaMBwxGjAYBgNVBAMTEXNlcnZlci5kYzEu
+Y29uc3VsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUgLf6HrDKCASodZ5vQIW
+Khh8RLBjGjz/Fs4pPQGA7QKjLQ/gGENr2mTwC4x9sroINn0icM0BYqMptaeIJYZq
+ZaOCAQEwgf4wDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggr
+BgEFBQcDAjAMBgNVHRMBAf8EAjAAMCkGA1UdDgQiBCCOiR3HIURsmqI6lUd1WFlx
+dCEBCMTKxV8FdkmxBQ/2HDArBgNVHSMEJDAigCBK4qiJX//ct3PcH25DpwOof8wF
+KtxUdJYSCf6WfHj8gzBnBgNVHREEYDBegghsZWFkZXIwMYIWbGVhZGVyMDEuaGFz
+aGlzdGFjay5pZYIRc2VydmVyLmRjMS5jb25zdWyCCWxvY2FsaG9zdIcEwKgEC4cE
+wKgJC4cEwKhjC4cEfwAAAYcEfwAAATAKBggqhkjOPQQDAgNJADBGAiEAt9LeH9qH
++kibJvAdIsz04/vUrB5LclC7Hdvxth/qUD4CIQC4bqNijEAf031ClE2h0LPBffct
+1WaULDyj2ckHiGQhAA==
+-----END CERTIFICATE-----
+subject=CN = server.dc1.consul
+
+issuer=C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+
+---
+No client certificate CA names sent
+Client Certificate Types: RSA sign, ECDSA sign
+Requested Signature Algorithms: RSA+SHA256:ECDSA+SHA256:RSA+SHA384:ECDSA+SHA384:RSA+SHA512:ECDSA+SHA512:RSA+SHA1:ECDSA+SHA1
+Shared Requested Signature Algorithms: RSA+SHA256:ECDSA+SHA256:RSA+SHA384:ECDSA+SHA384:RSA+SHA512:ECDSA+SHA512:RSA+SHA1:ECDSA+SHA1
+Peer signing digest: SHA256
+Peer signature type: ECDSA
+Server Temp Key: X25519, 253 bits
+---
+SSL handshake has read 1152 bytes and written 419 bytes
+Verification error: unable to verify the first certificate
+---
+New, TLSv1.2, Cipher is ECDHE-ECDSA-AES256-GCM-SHA384
+Server public key is 256 bit
+Secure Renegotiation IS supported
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+SSL-Session:
+    Protocol  : TLSv1.2
+    Cipher    : ECDHE-ECDSA-AES256-GCM-SHA384
+    Session-ID: 2810E3F812AD2B62C381CD39CC5B24435E7142FA72F0D6AF6C96D934847BF7BC
+    Session-ID-ctx:
+    Master-Key: 99EB5EFB9BE672C0E29F5072AA1762FE14D0927957B829ED9B1FF7C9764474A914825782D7783DA8A34D68286376748A
+    PSK identity: None
+    PSK identity hint: None
+    SRP username: None
+    TLS session ticket:
+    0000 - 41 5a d8 47 52 bd 69 c8-db 39 fa 34 45 37 78 2a   AZ.GR.i..9.4E7x*
+    0010 - e2 a0 86 c3 a8 ff 70 a2-96 f0 67 ed fb 81 d0 75   ......p...g....u
+    0020 - a6 06 85 c6 cd 9a 0b 24-4b 76 5e eb 16 5d c9 10   .......$Kv^..]..
+    0030 - 1d e1 e3 f0 95 39 5f e6-04 54 4a 8b a8 98 0e 93   .....9_..TJ.....
+    0040 - f4 bb 10 23 b3 05 05 a9-3f c3 40 5f 06 7f f4 d5   ...#....?.@_....
+    0050 - 45 2b b7 d5 58 0b 64 6b-d8 03 40 ee 15 73 2f 87   E+..X.dk..@..s/.
+    0060 - ba 4b ac 27 0a ea 59 ba-10 c6 2f 4f af af c7 7c   .K.'..Y.../O...|
+    0070 - 81 f5 cd fb be f4 19 19-                          ........
+
+    Start Time: 1578416892
+    Timeout   : 7200 (sec)
+    Verify return code: 21 (unable to verify the first certificate)
+    Extended master secret: no
+---
+closed
+root@app01:~# openssl s_client -connect 192.168.4.11:8321
+CONNECTED(00000005)
+depth=0 CN = server.dc1.consul
+verify error:num=20:unable to get local issuer certificate
+verify return:1
+depth=0 CN = server.dc1.consul
+verify error:num=21:unable to verify the first certificate
+verify return:1
+140565454082496:error:14094412:SSL routines:ssl3_read_bytes:sslv3 alert bad certificate:../ssl/record/rec_layer_s3.c:1528:SSL alert number 42
+---
+Certificate chain
+ 0 s:CN = server.dc1.consul
+   i:C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+MIIC2TCCAn6gAwIBAgIRAMeag4LNcNz6+oXV4BEUuTIwCgYIKoZIzj0EAwIwgbkx
+CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
+bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
+FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
+IDI3MzcxMzMxMjgxNTE5NTk2ODgyNDI4MjcyOTA0MDg2ODY1NDI5MTAeFw0yMDAx
+MDcxMjI3MTNaFw0yMTAxMDYxMjI3MTNaMBwxGjAYBgNVBAMTEXNlcnZlci5kYzEu
+Y29uc3VsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUgLf6HrDKCASodZ5vQIW
+Khh8RLBjGjz/Fs4pPQGA7QKjLQ/gGENr2mTwC4x9sroINn0icM0BYqMptaeIJYZq
+ZaOCAQEwgf4wDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggr
+BgEFBQcDAjAMBgNVHRMBAf8EAjAAMCkGA1UdDgQiBCCOiR3HIURsmqI6lUd1WFlx
+dCEBCMTKxV8FdkmxBQ/2HDArBgNVHSMEJDAigCBK4qiJX//ct3PcH25DpwOof8wF
+KtxUdJYSCf6WfHj8gzBnBgNVHREEYDBegghsZWFkZXIwMYIWbGVhZGVyMDEuaGFz
+aGlzdGFjay5pZYIRc2VydmVyLmRjMS5jb25zdWyCCWxvY2FsaG9zdIcEwKgEC4cE
+wKgJC4cEwKhjC4cEfwAAAYcEfwAAATAKBggqhkjOPQQDAgNJADBGAiEAt9LeH9qH
++kibJvAdIsz04/vUrB5LclC7Hdvxth/qUD4CIQC4bqNijEAf031ClE2h0LPBffct
+1WaULDyj2ckHiGQhAA==
+-----END CERTIFICATE-----
+subject=CN = server.dc1.consul
+
+issuer=C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+
+---
+Acceptable client certificate CA names
+C = US, ST = CA, L = San Francisco, street = 101 Second Street, postalCode = 94105, O = HashiCorp Inc., CN = Consul Agent CA 273713312815195968824282729040868654291
+Client Certificate Types: RSA sign, ECDSA sign
+Requested Signature Algorithms: RSA+SHA256:ECDSA+SHA256:RSA+SHA384:ECDSA+SHA384:RSA+SHA512:ECDSA+SHA512:RSA+SHA1:ECDSA+SHA1
+Shared Requested Signature Algorithms: RSA+SHA256:ECDSA+SHA256:RSA+SHA384:ECDSA+SHA384:RSA+SHA512:ECDSA+SHA512:RSA+SHA1:ECDSA+SHA1
+Peer signing digest: SHA256
+Peer signature type: ECDSA
+Server Temp Key: X25519, 253 bits
+---
+SSL handshake has read 1164 bytes and written 419 bytes
+Verification error: unable to verify the first certificate
+---
+New, TLSv1.2, Cipher is ECDHE-ECDSA-AES256-GCM-SHA384
+Server public key is 256 bit
+Secure Renegotiation IS supported
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+SSL-Session:
+    Protocol  : TLSv1.2
+    Cipher    : ECDHE-ECDSA-AES256-GCM-SHA384
+    Session-ID:
+    Session-ID-ctx:
+    Master-Key: DAD29246B7C4C4595A42FEF868CE4FD33D4313C421249CDFD9A4B898E1861F26A98B77B981583D7BA2BD92D66A98C719
+    PSK identity: None
+    PSK identity hint: None
+    SRP username: None
+    Start Time: 1578416911
+    Timeout   : 7200 (sec)
+    Verify return code: 21 (unable to verify the first certificate)
+    Extended master secret: no
+---
+```
+
+Verify the certificates
+
+```console
+root@app01:~# openssl verify -CAfile /usr/local/bootstrap/certificate-config/consul-ca.pem /usr/local/bootstrap/certificate-config/server.pem
+/usr/local/bootstrap/certificate-config/server.pem: OK
+root@app01:~# openssl verify -CAfile /usr/local/bootstrap/certificate-config/consul-ca.pem /usr/local/bootstrap/certificate-config/client.pem
+/usr/local/bootstrap/certificate-config/client.pem: OK
+root@app01:~# openssl verify -CAfile /usr/local/bootstrap/certificate-config/consul-ca.pem /usr/local/bootstrap/certificate-config/cli.pem
+/usr/local/bootstrap/certificate-config/cli.pem: OK
+```
+
+Prerequisites on each client
+
+```console
+    # Configure consul environment variables for use with certificates 
+    export CONSUL_HTTP_ADDR=https://127.0.0.1:8321
+    export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
+    export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
+    export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+
+    export VAULT_TOKEN=reallystrongpassword
+    export VAULT_ADDR=https://192.168.4.11:8322
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+  
+    AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
+    export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
+    export CONSUL_HTTP_SSL=true
+    export CONSUL_GRPC_ADDR=127.0.0.1:8502
+```
+
+Convert Key for Import into MacOS/Chrome
+openssl pkcs12 -password pass:bananas -export -out consul-server.pfx -inkey server-key.pem -in server.pem -certfile consul-ca.pem
