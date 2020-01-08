@@ -32,6 +32,7 @@ data "vsphere_virtual_machine" "template" {
 }
 
 resource "vsphere_virtual_machine" "leader010vm" {
+  
   name             = "leader010"
   resource_pool_id = data.vsphere_resource_pool.pool.id
   datastore_id     = data.vsphere_datastore.datastore.id
@@ -72,29 +73,22 @@ resource "vsphere_virtual_machine" "leader010vm" {
     }    
 
   }
-
+  
+  connection {
+    type     = "ssh"
+    user     = "root"
+    private_key = file(var.ssh_private_key)
+    certificate = file(var.ssh_certificate)
+    host = self.default_ip_address
+  }
+  
   provisioner "file" {
     source      = "../../../../"
     destination = "/usr/local/bootstrap/"
 
-    connection {
-        type     = "ssh"
-         user     = "vagrant"
-        private_key = file(var.ssh_private_key)
-        certificate = file(var.ssh_certificate)
-        host = self.default_ip_address
-    }
   }
 
   provisioner "remote-exec" {
-    
-    connection {
-        type     = "ssh"
-         user     = "vagrant"
-        private_key = file(var.ssh_private_key)
-        certificate = file(var.ssh_certificate)
-        host = self.default_ip_address
-    }
 
     inline = [
         "touch /tmp/cloudinit-start.txt",
@@ -105,6 +99,7 @@ resource "vsphere_virtual_machine" "leader010vm" {
         "sudo /usr/local/bootstrap/scripts/install_consul.sh",
         "sudo /usr/local/bootstrap/scripts/consul_enable_acls_1.4.sh",
         "sudo /usr/local/bootstrap/scripts/install_vault.sh",
+        "sudo /usr/local/bootstrap/scripts/create_consul_policy_for_demo_app.sh",
         "touch /tmp/cloudinit-finish.txt",
     ]
   }
@@ -152,29 +147,22 @@ resource "vsphere_virtual_machine" "app01vm" {
 
   }
 
+  connection {
+    type     = "ssh"
+    user     = "root"
+    private_key = file(var.ssh_private_key)
+    certificate = file(var.ssh_certificate)
+    host = self.default_ip_address
+  }
+
   provisioner "file" {
     source      = "../../../../"
     destination = "/usr/local/bootstrap/"
 
-    connection {
-        type     = "ssh"
-         user     = "vagrant"
-        private_key = file(var.ssh_private_key)
-        certificate = file(var.ssh_certificate)
-        host = self.default_ip_address
-    }
   }
 
   provisioner "remote-exec" {
     
-    connection {
-        type     = "ssh"
-         user     = "vagrant"
-        private_key = file(var.ssh_private_key)
-        certificate = file(var.ssh_certificate)
-        host = self.default_ip_address
-    }
-
     inline = [
         "touch /tmp/cloudinit-start.txt",
         "sudo chmod -R 777 /usr/local/bootstrap/",
@@ -187,8 +175,6 @@ resource "vsphere_virtual_machine" "app01vm" {
         "touch /tmp/cloudinit-finish.txt",
     ]    
   }  
-
-
 
   depends_on = [vsphere_virtual_machine.leader010vm]
 
@@ -237,31 +223,24 @@ resource "vsphere_virtual_machine" "client01vm" {
     }    
 
   }
+  
+  connection {
+    type     = "ssh"
+    user     = "root"
+    private_key = file(var.ssh_private_key)
+    certificate = file(var.ssh_certificate)
+    host = self.default_ip_address
+  }
 
   provisioner "file" {
     source      = "../../../../"
     destination = "/usr/local/bootstrap/"
 
-    connection {
-        type     = "ssh"
-         user     = "vagrant"
-        private_key = file(var.ssh_private_key)
-        certificate = file(var.ssh_certificate)
-        host = self.default_ip_address
-    }
   }
 
 
   provisioner "remote-exec" {
     
-    connection {
-        type     = "ssh"
-         user     = "vagrant"
-        private_key = file(var.ssh_private_key)
-        certificate = file(var.ssh_certificate)
-        host = self.default_ip_address
-    }
-
     inline = [
         "touch /tmp/cloudinit-start.txt",
         "sudo chmod -R 777 /usr/local/bootstrap/",

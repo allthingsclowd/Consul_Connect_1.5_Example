@@ -18,3 +18,7 @@ variable "ssh_certificate" {
 variable "ssh_private_key" {
   description = "SSH Private Key"
 }
+
+variable "ssh_host_key" {
+  description = "Public Key from Remote Host"
+}
