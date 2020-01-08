@@ -27,7 +27,7 @@ data "vsphere_network" "network" {
 }
 
 data "vsphere_virtual_machine" "template" {
-  name          = "hashistack"
+  name          = "hashistack-oss"
   datacenter_id = data.vsphere_datacenter.dc.id
 }
 
@@ -79,7 +79,7 @@ resource "vsphere_virtual_machine" "leader010vm" {
 
     connection {
         type     = "ssh"
-        user     = "root"
+         user     = "vagrant"
         private_key = file(var.ssh_private_key)
         certificate = file(var.ssh_certificate)
         host = self.default_ip_address
@@ -90,7 +90,7 @@ resource "vsphere_virtual_machine" "leader010vm" {
     
     connection {
         type     = "ssh"
-        user     = "root"
+         user     = "vagrant"
         private_key = file(var.ssh_private_key)
         certificate = file(var.ssh_certificate)
         host = self.default_ip_address
@@ -158,7 +158,7 @@ resource "vsphere_virtual_machine" "app01vm" {
 
     connection {
         type     = "ssh"
-        user     = "root"
+         user     = "vagrant"
         private_key = file(var.ssh_private_key)
         certificate = file(var.ssh_certificate)
         host = self.default_ip_address
@@ -169,7 +169,7 @@ resource "vsphere_virtual_machine" "app01vm" {
     
     connection {
         type     = "ssh"
-        user     = "root"
+         user     = "vagrant"
         private_key = file(var.ssh_private_key)
         certificate = file(var.ssh_certificate)
         host = self.default_ip_address
@@ -244,7 +244,7 @@ resource "vsphere_virtual_machine" "client01vm" {
 
     connection {
         type     = "ssh"
-        user     = "root"
+         user     = "vagrant"
         private_key = file(var.ssh_private_key)
         certificate = file(var.ssh_certificate)
         host = self.default_ip_address
@@ -256,7 +256,7 @@ resource "vsphere_virtual_machine" "client01vm" {
     
     connection {
         type     = "ssh"
-        user     = "root"
+         user     = "vagrant"
         private_key = file(var.ssh_private_key)
         certificate = file(var.ssh_certificate)
         host = self.default_ip_address
