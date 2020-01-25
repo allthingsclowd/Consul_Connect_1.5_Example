@@ -12,11 +12,11 @@ setup_environment () {
 
     export VAULT_TOKEN=reallystrongpassword
     export VAULT_ADDR=https://192.168.4.11:8322
-    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
   
-    AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
+    AGENTTOKEN=`vault kv get -field "value" kv/development/bootstraptoken`
     export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
     export CONSUL_HTTP_SSL=true
     export CONSUL_GRPC_ADDR=127.0.0.1:8502

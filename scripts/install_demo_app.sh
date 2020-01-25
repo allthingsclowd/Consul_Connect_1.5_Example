@@ -22,7 +22,6 @@ create_service () {
 Description=${2}
 Requires=network-online.target
 After=network-online.target
-ConditionDirectoryNotEmpty=/etc/${1}.d/
 StartLimitIntervalSec=60
 StartLimitBurst=3
 
@@ -67,6 +66,7 @@ create_service_user () {
 create_demo_app_service () {
     
     create_service demoapp "HashiCorp Consul Connect Demo Service" "/usr/local/bin/http-echo -listen=\"127.0.0.1:9090\" -text=\"Hello from ${HOSTNAME} application server!\"" simple
+    sudo systemctl enable demoapp
     sudo systemctl start demoapp
 
 }
@@ -81,14 +81,14 @@ setup_environment () {
 
   export VAULT_TOKEN=reallystrongpassword
   export VAULT_ADDR=https://192.168.4.11:8322
-  export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-  export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-  export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+  export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+  export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+  export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 
   AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
   export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
   export CONSUL_HTTP_SSL=true
-  export CONSUL_GRPC_ADDR=127.0.0.1:8502
+  export CONSUL_GRPC_ADDR=https://127.0.0.1:8502
 
   SERVICETOKEN=`vault kv get -field "value" kv/development/SERVICETOKEN`
   export SERVICETOKEN
@@ -144,7 +144,7 @@ EOF
       --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
       --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
       --cert "/usr/local/bootstrap/certificate-config/client.pem" \
-      --header "X-Consul-Token: ${SERVICETOKEN}" \
+      --header "X-Consul-Token: ${AGENTTOKEN}" \
       --data @httpecho_service.json \
       ${CONSUL_HTTP_ADDR}/v1/agent/service/register
 
@@ -162,6 +162,7 @@ dump_envoy_config () {
 }
 
 setup_environment
+register_demo_app_service
 install_demo_app
 create_demo_app_service
 dump_envoy_config

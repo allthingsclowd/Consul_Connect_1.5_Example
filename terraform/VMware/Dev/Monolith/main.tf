@@ -76,9 +76,8 @@ resource "vsphere_virtual_machine" "leader010vm" {
   
   connection {
     type     = "ssh"
-    user     = "root"
-    private_key = file(var.ssh_private_key)
-    certificate = file(var.ssh_certificate)
+    user     = "vagrant"
+    password = "vagrant"
     host = self.default_ip_address
   }
   
@@ -149,9 +148,8 @@ resource "vsphere_virtual_machine" "app01vm" {
 
   connection {
     type     = "ssh"
-    user     = "root"
-    private_key = file(var.ssh_private_key)
-    certificate = file(var.ssh_certificate)
+    user     = "vagrant"
+    password = "vagrant"
     host = self.default_ip_address
   }
 
@@ -226,9 +224,8 @@ resource "vsphere_virtual_machine" "client01vm" {
   
   connection {
     type     = "ssh"
-    user     = "root"
-    private_key = file(var.ssh_private_key)
-    certificate = file(var.ssh_certificate)
+    user     = "vagrant"
+    password = "vagrant"
     host = self.default_ip_address
   }
 

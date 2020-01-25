@@ -25,12 +25,13 @@ setup_environment () {
     export CONSUL_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
     export CONSUL_CLIENT_CERT=/usr/local/bootstrap/certificate-config/cli.pem
     export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
+    export CONSUL_GRPC_ADDR=https://127.0.0.1:8502
 
     export VAULT_TOKEN=reallystrongpassword
     export VAULT_ADDR=https://192.168.4.11:8322
-    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
     
 
     export AGENT_CONFIG="-config-dir=/etc/consul.d -enable-script-checks=true"

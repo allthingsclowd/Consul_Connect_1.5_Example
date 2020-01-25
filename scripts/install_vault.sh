@@ -43,9 +43,9 @@ setup_environment () {
 
     export VAULT_TOKEN=reallystrongpassword
     export VAULT_ADDR=https://127.0.0.1:8322
-    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 
     echo 'End Setup of Vault Environment'
 }
@@ -242,9 +242,9 @@ EOF
     # Create the approle backend
     curl \
         --location \
-        --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-        --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-        --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+        --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+        --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+        --cert "/usr/local/bootstrap/certificate-config/client.pem" \
         --header "X-Vault-Token: ${VAULT_TOKEN}" \
         --request POST \
         --data @approle.json \
@@ -260,9 +260,9 @@ EOF
     # Write the policy
     curl \
         --location \
-        --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-        --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-        --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+        --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+        --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+        --cert "/usr/local/bootstrap/certificate-config/client.pem" \
         --header "X-Vault-Token: ${VAULT_TOKEN}" \
         --request PUT \
         --data @id-factory-secret-read.json \
@@ -271,9 +271,9 @@ EOF
     # List ACL policies
     sudo curl \
         --location \
-        --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-        --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-        --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+        --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+        --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+        --cert "/usr/local/bootstrap/certificate-config/client.pem" \
         --header "X-Vault-Token: ${VAULT_TOKEN}" \
         --request LIST \
         ${VAULT_ADDR}/v1/sys/policy | jq .
@@ -281,9 +281,9 @@ EOF
     # Check if AppRole Exists
     APPROLEID=`curl  \
     --header "X-Vault-Token: ${VAULT_TOKEN}" \
-    --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-    --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-    --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+    --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+    --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+    --cert "/usr/local/bootstrap/certificate-config/client.pem" \
     ${VAULT_ADDR}/v1/auth/approle/role/id-factory/role-id | jq -r .data.role_id`
 
     if [ "${APPROLEID}" == null ]; then
@@ -313,9 +313,9 @@ EOF
         # Create the AppRole role
         curl \
             --location \
-            --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-            --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-            --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+            --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+            --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+            --cert "/usr/local/bootstrap/certificate-config/client.pem" \
             --header "X-Vault-Token: ${VAULT_TOKEN}" \
             --request POST \
             --data @id-factory-approle-role.json \
@@ -324,9 +324,9 @@ EOF
         # Update the static AppRole role-id
         curl \
             --location \
-            --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-            --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-            --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+            --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+            --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+            --cert "/usr/local/bootstrap/certificate-config/client.pem" \
             --header "X-Vault-Token: ${VAULT_TOKEN}" \
             --request POST \
             --data @id-factory-static-role-id.json \
@@ -334,9 +334,9 @@ EOF
 
         APPROLEID=`curl  \
             --header "X-Vault-Token: ${VAULT_TOKEN}" \
-            --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-            --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-            --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+            --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+            --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+            --cert "/usr/local/bootstrap/certificate-config/client.pem" \
             ${VAULT_ADDR}/v1/auth/approle/role/id-factory/role-id | jq -r .data.role_id`
 
     fi
@@ -369,9 +369,9 @@ get_approle_id () {
     # retrieve the appRole-id from the approle
     APPROLEID=`curl  \
     --header "X-Vault-Token: ${VAULT_TOKEN}" \
-    --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-    --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-    --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+    --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+    --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+    --cert "/usr/local/bootstrap/certificate-config/client.pem" \
     ${VAULT_ADDR}/v1/auth/approle/role/id-factory/role-id | jq -r .data.role_id`
     echo 'Get APP-ROLE ID Complete'
 
@@ -382,9 +382,9 @@ bootstrap_secret_data () {
     echo 'Set environmental bootstrapping data in VAULT'
     export VAULT_TOKEN=reallystrongpassword
     export VAULT_ADDR=https://127.0.0.1:8322
-    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
     REDIS_MASTER_PASSWORD=`openssl rand -base64 32`
     APPROLEID=`cat /usr/local/bootstrap/.appRoleID`
     DB_VAULT_TOKEN=`cat /usr/local/bootstrap/.database-token`
@@ -409,9 +409,9 @@ get_secret_id () {
     # Generate a new secret-id
     SECRET_ID=`curl \
         --location \
-        --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-        --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-        --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+        --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+        --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+        --cert "/usr/local/bootstrap/certificate-config/client.pem" \
         --header "X-Vault-Token: ${VAULT_TOKEN}" \
         --request POST \
         ${VAULT_ADDR}/v1/auth/approle/role/id-factory/secret-id | jq -r .data.secret_id`
@@ -431,9 +431,9 @@ EOF
 
     APPTOKEN=`curl \
         --request POST \
-        --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-        --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-        --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+        --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+        --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+        --cert "/usr/local/bootstrap/certificate-config/client.pem" \
         --data @id-factory-secret-id-login.json \
         ${VAULT_ADDR}/v1/auth/approle/login | jq -r .auth.client_token`
 
@@ -446,9 +446,9 @@ EOF
 
     RESULT=`curl \
         --header "X-Vault-Token: ${APPTOKEN}" \
-        --cacert "/usr/local/bootstrap/certificate-config/hashistack-ca.pem" \
-        --key "/usr/local/bootstrap/certificate-config/hashistack-client-key.pem" \
-        --cert "/usr/local/bootstrap/certificate-config/hashistack-client.pem" \
+        --cacert "/usr/local/bootstrap/certificate-config/consul-ca.pem" \
+        --key "/usr/local/bootstrap/certificate-config/client-key.pem" \
+        --cert "/usr/local/bootstrap/certificate-config/client.pem" \
         ${VAULT_ADDR}/v1/kv/development/redispassword | jq -r .data.value`
 
     if [ "${RESULT}" != "${REDIS_MASTER_PASSWORD}" ];then

@@ -28,7 +28,7 @@ root@leader010:~# consul tls cert create -cli
 root@leader010:~#
 ```
 
-- Vault Configuration (not really relevant here)
+## Vault Configuration (not really relevant here - I just dump params there for convenience)
 
 ```console
 root@leader010:~# cat /etc/vault.d/vault.hcl
@@ -57,7 +57,7 @@ root@leader010:~# cat /etc/vault.d/vault.hcl
 root@leader010:~#
 ```
 
-- Consul Configuration
+# Consul Configuration
 
 ```console
 
@@ -89,15 +89,15 @@ export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
 
 export VAULT_TOKEN=reallystrongpassword
 export VAULT_ADDR=https://192.168.4.11:8322
-export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 
-AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
-export CONSUL_HTTP_TOKEN=${AGENTTOKEN}
+BOOTSTRAPTOKEN=`vault kv get -field "value" kv/development/bootstrap_acl`
+export CONSUL_HTTP_TOKEN=${BOOTSTRAPTOKEN}
 export CONSUL_HTTP_SSL=true
 export CONSUL_GRPC_ADDR=127.0.0.1:8502
-
+echo
 
 create_acl_policy () {
 
@@ -173,9 +173,9 @@ export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
 
 export VAULT_TOKEN=reallystrongpassword
 export VAULT_ADDR=https://192.168.4.11:8322
-export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 
 export CONSUL_HTTP_SSL=true
 export CONSUL_GRPC_ADDR=127.0.0.1:8502
@@ -229,9 +229,9 @@ export CONSUL_CLIENT_KEY=/usr/local/bootstrap/certificate-config/cli-key.pem
 
 export VAULT_TOKEN=reallystrongpassword
 export VAULT_ADDR=https://192.168.4.11:8322
-export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
 
 export CONSUL_HTTP_SSL=true
 export CONSUL_GRPC_ADDR=127.0.0.1:8502
@@ -1327,9 +1327,9 @@ Prerequisites on each client
 
     export VAULT_TOKEN=reallystrongpassword
     export VAULT_ADDR=https://192.168.4.11:8322
-    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/hashistack-client-key.pem
-    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/hashistack-client.pem
-    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/hashistack-ca.pem
+    export VAULT_CLIENT_KEY=/usr/local/bootstrap/certificate-config/client-key.pem
+    export VAULT_CLIENT_CERT=/usr/local/bootstrap/certificate-config/client.pem
+    export VAULT_CACERT=/usr/local/bootstrap/certificate-config/consul-ca.pem
   
     AGENTTOKEN=`vault kv get -field "value" kv/development/consulagentacl`
     export CONSUL_HTTP_TOKEN=${AGENTTOKEN}

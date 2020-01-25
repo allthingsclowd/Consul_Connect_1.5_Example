@@ -11,7 +11,7 @@ sudo -u vault mkdir --parents /etc/vault.d/pki/tls/private/consul /etc/vault.d/p
 # temp hack replace vault certs with consul certs
 sudo -u vault cp -r /usr/local/bootstrap/certificate-config/server-key.pem /usr/local/bootstrap/certificate-config/hashistack-server-key.pem
 sudo -u vault cp -r /usr/local/bootstrap/certificate-config/server.pem /usr/local/bootstrap/certificate-config/hashistack-server.pem
-sudo -u vault cp -r /usr/local/bootstrap/certificate-config/consul-ca.pem /usr/local/bootstrap/certificate-config/hashistack-ca.pem
+sudo -u vault cp -r /usr/local/bootstrap/certificate-config/consul-ca.pem /usr/local/bootstrap/certificate-config/consul-ca.pem
 
 sudo -u vault cp -r /usr/local/bootstrap/certificate-config/hashistack-server-key.pem /etc/vault.d/pki/tls/private/vault/hashistack-server-key.pem
 sudo -u vault cp -r /usr/local/bootstrap/certificate-config/hashistack-server.pem /etc/vault.d/pki/tls/certs/vault/hashistack-server.pem

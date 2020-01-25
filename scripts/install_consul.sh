@@ -56,11 +56,6 @@ ca_file = "/etc/consul.d/pki/tls/certs/consul/consul-ca.pem"
 EOF
 
 
-
-
-
-
-
 }
 
 setup_environment () {
@@ -187,7 +182,7 @@ install_consul () {
       else
         
         sudo sed -i "/ExecStart=/c\ExecStart=/usr/local/bin/consul agent -server -log-level=debug -ui -client=0.0.0.0 -join=${IP} -bind=${IP} ${AGENT_CONFIG} -data-dir=/usr/local/consul -bootstrap-expect=1" /etc/systemd/system/consul.service
-        sudo -u consul cp -r /usr/local/bootstrap/conf/consul.d/* /etc/consul.d/.
+        #sudo -u consul cp -r /usr/local/bootstrap/conf/consul.d/* /etc/consul.d/.
         sudo systemctl enable consul
         sudo systemctl start consul
       fi
